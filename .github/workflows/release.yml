@@ -1,4 +1,4 @@
-name: Build and Release Chrome Extension
+name: Build and Release Extension
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Set up Node.js
@@ -18,17 +18,18 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Dependencies
+        run: npm install
 
-      - name: Build extension with Vite
+      - name: Build Extension
         run: npm run build
 
-      - name: Zip the dist folder
+      - name: Zip dist Folder
         run: |
-          zip -r extension.zip dist
+          cd dist
+          zip -r ../extension.zip .
 
-      - name: Create GitHub Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ github.ref_name }}
