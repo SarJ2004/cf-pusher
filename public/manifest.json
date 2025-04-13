@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "CFPusher - Codeforces to GitHub",
+  "version": "1.0",
+  "key": "MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDJo6M4r0RBMLcWZzkNAB6tt9DkdW5ltbqlETC2Q4CtEb+KNIYNDPeo+W19pUgjm4SD1AwiH01k2HQyGHMiOZRX4RXB+l0sjzfR8+GWCKM2w2HcThRTxg4HXAewl0GfXjXDvBuc/GsznLPuMjzv7mu1W9yzIrb6Ccik/U4I2yFflURinfeH1YWMsGRIZ88GE+pGHwahmH+QpPySHsyvdE9SYV6yGSG2sVFgBgCVDTwwPWlIfBeAKI+ZaGVJaCKXTIVafywmJ3BpcXi87hmQ4HPb7V58nCAz81VjXi0DMzH8izdG2nZ53qV6cgOmQ42NDogrghBSxrNBZJABDpeWKyxzAgMBAAECggEBAL8FfO2IbLrtcaWRqGR+hpHAH+8uqKVGYklaXbFthYtv0usVEyFt9XlowqdTW2IQRJu22L/Cs8kjngCPVRNJRRVzsO8RRg+eph0KU92U1TpeImlYtr0eVc/3CXnr8UkPMRP7MpWoM86zV2oCwePzFKq9GfnCm2GIv0I+jhypq5Yl3ImYmrkpq6irmILv1kVBT8OyPP3OLdzhwJFCXh3ljBHP+16RYhyS2hHSesnRsTMdp0LITJ2vBtTtQV2kDdEqhj9il5iC5T7v1HPRbXZQLnkfMyrGTLjeSnvF1oMXww6UsSgasoV1de+c0B5j6lOfqtJF7ztq2OFD8OjtB+9bGrECgYEA974d3mpitEzFCQZcyM4Tud8ZGXHSzq8BRTYVhrWi0ZIQCxpu/tMLkuHjszgffzGJLf/gdI298Hcj7b1liby2Rr9Gh0x9ryccsDlMF9AHUYBr1y+4pf8Dfm4DNufPM2oIRDtlnreFnnj4ekbJ1MoZC57by5WiVo0wcjszWulvJ28CgYEA0FwjyLg6UP0PDR53Nwz/Dhm+d3dB5Q2tlviJbbDFZtx6zVwe8E370/bSM0DBlwH1Otx64iYumb2iLjCCCuylRbcduy10fa/bwh/fuCUe0KDFTmxozXn0+uFlrCwSiJx1Pp0RVATIW/uZnfnvRCPCAl4ecLy81S/IvHveL42CKT0CgYEA5qMjg3BfO6NMu74kmvze+GduInYI30mlUR2spKBsV9Y3AV82fh1T5QZOyQYyrGMdZqmT+G4MqdUAqc9su/Hnb62ap1Lanzk2SAjPgku0xHdd7hMLP95NDmK0s2TTTPYlhAAX9s67onDUQmGsfGE5N8xIqxs+6ny+4Vmj0bsINBkCgYAztSoMPev6/VIm51CekNMbJLhn3Wi091gFB1jTp/LVPBIdtKbY7AF68N3pakCgwROir+SvCtq1vKHq5I7hNyksy+zM7tLh/iqDWnWitVOYYs2UUMMRexqYyCb7O1S+IlXWXBRYzXcLnLzav5PpTRZwj/rt72jNXzZp0DOriWqr4QKBgQDs8qG9Gd3Ci5coFYphuLUFkbpaucWjs4ICxAAgg0xJrlfV4cocwNEbMZgxvynlblDS/uN20KWRJsoTs4wmrxY+S3EU+mEvzRQ4EwR7cm66yqxYFeoRpxPhYRQNTd6sl2s21IWsffwlkMnycARsHBQeHFiU2zg6meBUUbSbm7mMVQ==",
+  "description": "Automatically pushes accepted Codeforces submissions to your GitHub repository.",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "icons": {
+    "16": "ext-icon.png",
+    "32": "ext-icon.png",
+    "48": "ext-icon.png",
+    "128": "ext-icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["identity", "storage", "scripting", "activeTab"],
+  "host_permissions": ["<all_urls>"]
+}
