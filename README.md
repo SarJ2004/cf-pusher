@@ -13,6 +13,7 @@
   - [Downloading the Extension](#downloading-the-extension)
   - [Manual Installation in Chrome](#manual-installation-in-chrome)
 - [Usage](#usage)
+  - [Known Issues](#known-issues)
 - [Development](#development)
   - [Prerequisites](#prerequisites)
   - [Setup](#setup)
