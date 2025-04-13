@@ -1,0 +1,38 @@
+name: Build and Release Chrome Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension with Vite
+        run: npm run build
+
+      - name: Zip the dist folder
+        run: |
+          zip -r extension.zip dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: extension.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
