@@ -1,4 +1,4 @@
-# CF Pusher
+# CFPusher
 
  
 *A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository*
