@@ -241,7 +241,7 @@ const Popup = () => {
         <Settings size={20} />
       </button>
 
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center relative">
         <img
           src={logoLight}
           alt="Logo"
@@ -252,6 +252,9 @@ const Popup = () => {
           alt="Logo"
           className="hidden dark:block w-32 h-auto"
         />
+        <p className="mt-2 mb-2 font-bold text-2xl  text-gray-800 dark:text-gray-200 absolute top-20">
+          CFPusher
+        </p>
 
         <ProfileInfo onHandleSubmit={setUsername} username={username} />
       </div>
