@@ -93,6 +93,7 @@ You are all set now!!
 
 3. **More of a Disadvantage**  
    The background script checks for new submissions every 30 seconds, but including the time to push, it takes almost a minute for the code to be available in one's repo. So, within that interval of a minute or so, if the user submits many different codes, only the most recent code gets pushed to the repo(sorry, will improve it in future, or you guys can too!)
+   
 4. **Problem Statement not formatted properly in README**
    I was unsuccessful to parse the problem statement properly in the README file. For the MathJax/latex elements, you will see them repeated, and a undefined term next to it. I promise to fix the parser later on.  
    
