@@ -131,7 +131,6 @@ const Popup = () => {
           const url = new URL(redirectUrl);
           const accessToken = url.searchParams.get("token");
           if (accessToken) {
-            console.log("GitHub Access Token:", accessToken);
             chrome.storage.local.set({ githubToken: accessToken });
             setGithubToken(accessToken);
           } else {

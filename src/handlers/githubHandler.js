@@ -5,7 +5,6 @@ export const pushToGitHub = async ({
   commitMessage,
   content,
 }) => {
-  console.log(repoFullName);
   const apiUrl = `https://api.github.com/repos/${repoFullName}/contents/${filePath}`;
 
   let sha = null;
@@ -62,39 +61,38 @@ export const pushToGitHub = async ({
   }
 };
 
-export const checkFileExistsOnGitHub = async ({
-  repoFullName,
-  githubToken,
-  filePath,
-}) => {
-  console.log("repo name", repoFullName);
-  const url = `https://api.github.com/repos/${repoFullName}/contents/${filePath}`;
+// export const checkFileExistsOnGitHub = async ({
+//   repoFullName,
+//   githubToken,
+//   filePath,
+// }) => {
+//   const url = `https://api.github.com/repos/${repoFullName}/contents/${filePath}`;
 
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `token ${githubToken}`,
-        Accept: "application/vnd.github+json",
-      },
-    });
+//   try {
+//     const res = await fetch(url, {
+//       method: "GET",
+//       headers: {
+//         Authorization: `token ${githubToken}`,
+//         Accept: "application/vnd.github+json",
+//       },
+//     });
 
-    if (res.status === 200) {
-      return true;
-    }
+//     if (res.status === 200) {
+//       return true;
+//     }
 
-    if (res.status === 404) {
-      return false;
-    }
-    const errorData = await res.json();
-    console.error(
-      `Unexpected response from GitHub (status ${res.status}):`,
-      errorData.message || errorData
-    );
+//     if (res.status === 404) {
+//       return false;
+//     }
+//     const errorData = await res.json();
+//     console.error(
+//       `Unexpected response from GitHub (status ${res.status}):`,
+//       errorData.message || errorData
+//     );
 
-    return false;
-  } catch (error) {
-    console.error("Network/fetch error in checkFileExistsOnGitHub:", error);
-    return false;
-  }
-};
+//     return false;
+//   } catch (error) {
+//     console.error("Network/fetch error in checkFileExistsOnGitHub:", error);
+//     return false;
+//   }
+// };
