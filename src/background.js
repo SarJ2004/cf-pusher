@@ -124,10 +124,7 @@ const setupPeriodicSync = async () => {
     const username = cfHandleObj.cf_handle;
 
     if (githubToken && linkedRepo && username) {
-      // 🔥 Run once immediately
       await syncLatestAcceptedSubmission(githubToken, linkedRepo, username);
-
-      // ⏱️ Then run every 30 seconds
       setInterval(() => {
         syncLatestAcceptedSubmission(githubToken, linkedRepo, username);
       }, 30 * 1000);
@@ -139,11 +136,8 @@ const setupPeriodicSync = async () => {
   }
 };
 
-chrome.runtime.onInstalled.addListener(() => {
-  setupPeriodicSync();
-});
-
-chrome.runtime.onStartup.addListener(() => {
+const attached = chrome.runtime.onInstalled || chrome.runtime.onStartup;
+attached.addListener(() => {
   setupPeriodicSync();
 });
 (async () => {
