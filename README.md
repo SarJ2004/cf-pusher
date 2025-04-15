@@ -68,7 +68,7 @@ You can download the latest release of the extension directly from GitHub:
 ### Manual Installation in Chrome
 
 1. **Download and Unzip:**  
-   Download the ZIP file from the [Releases](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.5/) section and unzip it to a desired location on your computer.
+   Download the ZIP file from the [Releases](https://github.com/SarJ2004/cf-pusher/releases) section and unzip it to a desired location on your computer.
 
 2. **Open Chrome Extensions Page:**  
    Open Chrome and navigate to `chrome://extensions/`.
