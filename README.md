@@ -8,6 +8,7 @@
 ## Table of Contents
 
 - [Description](#description)
+   - [Screenshots](#screenshots)
 - [Features](#features)
 - [Installation](#installation)
   - [Downloading the Extension](#downloading-the-extension)
@@ -29,6 +30,19 @@
 ## Description
 
 A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository. It leverages modern web technologies and is built using [Vite](https://vitejs.dev/) for fast development builds and optimized production output.
+
+### Screenshots
+![Popup View](https://res.cloudinary.com/do2max7gt/image/upload/v1744717130/Screenshot_2025-04-13_223724_m48xxm.png)
+*Popup showing the Codeforces login Screen*
+
+![Settings Page](https://res.cloudinary.com/do2max7gt/image/upload/v1744717131/Screenshot_2025-04-13_224538_nv3qtx.png)
+*Settings section where you can link GitHub and manage your repo*
+
+![Post-Login Screen](https://res.cloudinary.com/do2max7gt/image/upload/v1744717131/Screenshot_2025-04-13_223701_jxnhdb.png)
+*Sample GitHub repo with pushed code*
+
+![Successful Push](https://res.cloudinary.com/do2max7gt/image/upload/v1744717390/80f79c91-9725-483b-ac2b-e84acb300a06.png)
+*Sample GitHub repo with pushed code*
 
 ---
 
