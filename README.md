@@ -49,12 +49,12 @@ A powerful and user-friendly Chrome extension that pushes your most recent Codef
 
 You can download the latest release of the extension directly from GitHub:
 
-[Download Latest Release](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.3/extension.zip)
+[Download Latest Release](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.4/extension.zip)
 
 ### Manual Installation in Chrome
 
 1. **Download and Unzip:**  
-   Download the ZIP file from the [Releases](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.3/extension.zip) section and unzip it to a desired location on your computer.
+   Download the ZIP file from the [Releases](https://github.com/SarJ2004/cf-pusher/releases/tag/v1.0.4) section and unzip it to a desired location on your computer.
 
 2. **Open Chrome Extensions Page:**  
    Open Chrome and navigate to `chrome://extensions/`.
