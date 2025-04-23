@@ -23,7 +23,7 @@ const Popup = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    chrome.storage.local.get(["darkMode"], (result) => {
+    chrome.storage.sync.get(["darkMode"], (result) => {
       if (result.darkMode) {
         document.documentElement.classList.add("dark");
         setIsDarkMode(true);
@@ -35,11 +35,11 @@ const Popup = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
     document.documentElement.classList.toggle("dark", newMode);
-    chrome.storage.local.set({ darkMode: newMode });
+    chrome.storage.sync.set({ darkMode: newMode });
   };
 
   useEffect(() => {
-    chrome.storage.local.get(["linkedRepo"], (result) => {
+    chrome.storage.sync.get(["linkedRepo"], (result) => {
       if (result.linkedRepo) {
         setLinkedRepo(result.linkedRepo);
         setRepoInput(result.linkedRepo);
@@ -51,7 +51,7 @@ const Popup = () => {
     const stored = localStorage.getItem("cf_handle");
     if (stored) setUsername(stored);
 
-    chrome.storage.local.get("githubToken", (result) => {
+    chrome.storage.sync.get("githubToken", (result) => {
       if (result.githubToken) {
         setGithubToken(result.githubToken);
       }
@@ -110,28 +110,30 @@ const Popup = () => {
     fetchUsername();
   }, [githubToken]);
 
-  const handleGitHubAuth = () => {
-    const clientId = "Ov23liFyncsNX9Q5bp8o";
-    const backendCallback =
-      "https://codeforces-autopush-backend.onrender.com/auth/github/callback";
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-      backendCallback
-    )}&scope=repo`;
+  const handleGitHubAuth = (interactive = true) => {
+    const clientId = "Ov23liZwEyp8gsCsQOPb";
+    const backendCallback = `https://cfpusher-backend.onrender.com/auth/github/callback`;
+    const redirectUri = chrome.identity.getRedirectURL();
+    const state = encodeURIComponent(redirectUri); // stash redirectUri in state
+
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${backendCallback}&state=${state}&scope=repo`;
+
     chrome.identity.launchWebAuthFlow(
       {
         url: authUrl,
-        interactive: true,
+        interactive: Boolean(interactive),
       },
       (redirectUrl) => {
         if (chrome.runtime.lastError) {
           console.error("Auth Error:", chrome.runtime.lastError.message);
           return;
         }
+
         if (redirectUrl) {
           const url = new URL(redirectUrl);
           const accessToken = url.searchParams.get("token");
           if (accessToken) {
-            chrome.storage.local.set({ githubToken: accessToken });
+            chrome.storage.sync.set({ githubToken: accessToken });
             setGithubToken(accessToken);
           } else {
             console.warn("No token found in redirect URL");
@@ -142,7 +144,7 @@ const Popup = () => {
   };
 
   const handleDisconnectGitHub = () => {
-    chrome.storage.local.remove("githubToken", () => {
+    chrome.storage.sync.remove("githubToken", () => {
       console.log("GitHub token removed");
       setGithubToken(null);
     });
@@ -169,7 +171,7 @@ const Popup = () => {
       }
       const userData = await userRes.json();
       const fullName = `${userData.login}/${trimmedRepo}`;
-      chrome.storage.local.set({ linkedRepo: fullName }, () => {
+      chrome.storage.sync.set({ linkedRepo: fullName }, () => {
         setLinkedRepo(fullName);
         setRepoInput(fullName);
       });
@@ -218,7 +220,7 @@ const Popup = () => {
       }
       const createdRepo = await createRes.json();
       const fullName = `${username}/${createdRepo.name}`;
-      chrome.storage.local.set({ linkedRepo: fullName }, () => {
+      chrome.storage.sync.set({ linkedRepo: fullName }, () => {
         setLinkedRepo(fullName);
         setRepoInput(fullName);
       });
@@ -233,7 +235,7 @@ const Popup = () => {
   };
 
   return (
-    <div className="relative  bg-white dark:bg-gray-900 dark:text-white flex flex-col items-center p-8 pt-0 w-72">
+    <div className="relative  bg-white dark:bg-gray-900 dark:text-white flex flex-col items-center p-8 pt-0 w-96 ">
       <button
         onClick={toggleGitHubPopup}
         className="absolute top-2 right-2 hover:text-black text-gray-500 dark:text-gray-300 dark:hover:text-white cursor-pointer">
@@ -335,7 +337,7 @@ const Popup = () => {
                   </p>
                   <button
                     onClick={() => {
-                      chrome.storage.local.remove("linkedRepo", () => {
+                      chrome.storage.sync.remove("linkedRepo", () => {
                         setLinkedRepo("");
                         setRepoInput("");
                       });

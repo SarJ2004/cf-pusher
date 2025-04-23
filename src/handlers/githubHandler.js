@@ -60,39 +60,3 @@ export const pushToGitHub = async ({
     return false;
   }
 };
-
-// export const checkFileExistsOnGitHub = async ({
-//   repoFullName,
-//   githubToken,
-//   filePath,
-// }) => {
-//   const url = `https://api.github.com/repos/${repoFullName}/contents/${filePath}`;
-
-//   try {
-//     const res = await fetch(url, {
-//       method: "GET",
-//       headers: {
-//         Authorization: `token ${githubToken}`,
-//         Accept: "application/vnd.github+json",
-//       },
-//     });
-
-//     if (res.status === 200) {
-//       return true;
-//     }
-
-//     if (res.status === 404) {
-//       return false;
-//     }
-//     const errorData = await res.json();
-//     console.error(
-//       `Unexpected response from GitHub (status ${res.status}):`,
-//       errorData.message || errorData
-//     );
-
-//     return false;
-//   } catch (error) {
-//     console.error("Network/fetch error in checkFileExistsOnGitHub:", error);
-//     return false;
-//   }
-// };

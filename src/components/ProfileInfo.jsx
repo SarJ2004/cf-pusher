@@ -12,7 +12,7 @@ const ProfileInfo = ({ onHandleSubmit }) => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    chrome.storage.local.get(
+    chrome.storage.sync.get(
       ["cf_apiKey", "cf_apiSecret", "cf_handle"],
       (result) => {
         const storedApiKey = result.cf_apiKey;
@@ -50,7 +50,7 @@ const ProfileInfo = ({ onHandleSubmit }) => {
       const user = await fetchUserInfoWithAuth(apiKey, apiSecret, handleInput);
       setUserInfo(user);
 
-      chrome.storage.local.set(
+      chrome.storage.sync.set(
         { cf_apiKey: apiKey, cf_apiSecret: apiSecret, cf_handle: handleInput },
         () => {
           console.log(
@@ -70,7 +70,7 @@ const ProfileInfo = ({ onHandleSubmit }) => {
   };
 
   const handleLogout = () => {
-    chrome.storage.local.remove(["cf_apiKey", "cf_apiSecret"], () => {
+    chrome.storage.sync.remove(["cf_apiKey", "cf_apiSecret"], () => {
       console.log("API credentials removed from chrome.storage");
     });
     localStorage.removeItem("cf_handle");
@@ -92,7 +92,7 @@ const ProfileInfo = ({ onHandleSubmit }) => {
 
   if (userInfo) {
     return (
-      <div className="relative flex flex-col items-center gap-3 mb-4 p-2 outline-2 outline-offset-2 outline-white dark:outline-gray-800 rounded-xl shadow-md">
+      <div className="relative flex flex-col items-center gap-3 mb-4 p-2  dark:outline-gray-800 rounded-xl">
         <button
           onClick={handleLogout}
           className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition cursor-pointer"
@@ -104,7 +104,7 @@ const ProfileInfo = ({ onHandleSubmit }) => {
           <img
             src={userInfo.avatar}
             alt="avatar"
-            className="w-20 h-20 rounded-full border dark:border-gray-600"
+            className=" w-[100px] h-[56.33px] rounded-full  dark:border-gray-600"
           />
           <div className="text-left">
             <p className="font-bold text-sm text-gray-800 dark:text-gray-100">

@@ -96,12 +96,12 @@ export const fetchAcceptedSubmissions = async (username, count = 10) => {
 export const getProblemHTML = async (contestId, index) => {
   try {
     const url = `https://codeforces.com/contest/${contestId}/problem/${index}`;
-    const apiURL = `https://codeforces-autopush-backend.onrender.com/scrape?url=${encodeURIComponent(
+    const apiURL = `https://cfpusher-backend.onrender.com/scrape?url=${encodeURIComponent(
       url
     )}`;
     const res = await fetch(apiURL);
     const data = await res.json();
-    return data.html; // HTML string
+    return data.html;
   } catch (error) {
     console.error("Error fetching problem HTML:", error);
     return null;
@@ -111,7 +111,7 @@ export const getProblemHTML = async (contestId, index) => {
 export const getSubmissionCode = async (contestId, submissionId) => {
   try {
     const url = `https://codeforces.com/contest/${contestId}/submission/${submissionId}`;
-    const apiURL = `https://codeforces-autopush-backend.onrender.com/code?url=${encodeURIComponent(
+    const apiURL = `https://cfpusher-backend.onrender.com/code?url=${encodeURIComponent(
       url
     )}`;
 

@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Label } from "recharts";
 
 const COLORS = [
   "#ff6b6b",
@@ -48,24 +48,33 @@ const ProblemChart = ({ solvedData = [] }) => {
     return parseInt(a.name) - parseInt(b.name);
   });
 
+  // total count for center label
+  const total = sortedSolvedData.reduce((sum, entry) => sum + entry.count, 0);
+
   return (
     <div className="text-center mt-4">
       <h2 className="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200">
         📊 Solved Problems
       </h2>
 
-      <PieChart width={200} height={200}>
+      <PieChart width={260} height={260}>
         <Pie
           data={sortedSolvedData}
           cx="50%"
           cy="50%"
-          outerRadius={60}
-          fill="#8884d8"
-          dataKey="count"
-          label>
+          innerRadius={70}
+          outerRadius={100}
+          dataKey="count">
           {sortedSolvedData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
+
+          {/* Center total label */}
+          <Label
+            value={total}
+            position="center"
+            className="text-2xl font-bold text-gray-800 dark:text-gray-200"
+          />
         </Pie>
         <Tooltip content={<CustomTooltip />} />
       </PieChart>
