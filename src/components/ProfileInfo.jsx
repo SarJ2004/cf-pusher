@@ -53,10 +53,7 @@ const ProfileInfo = ({ onHandleSubmit }) => {
       chrome.storage.sync.set(
         { cf_apiKey: apiKey, cf_apiSecret: apiSecret, cf_handle: handleInput },
         () => {
-          console.log(
-            "API credentials and handle saved to chrome.storage",
-            handleInput
-          );
+          console.log("API credentials and handle saved to chrome.storage");
         }
       );
       localStorage.setItem("cf_handle", handleInput);
@@ -92,7 +89,7 @@ const ProfileInfo = ({ onHandleSubmit }) => {
 
   if (userInfo) {
     return (
-      <div className="relative flex flex-col items-center gap-3 mb-4 p-2  dark:outline-gray-800 rounded-xl">
+      <div className="relative flex flex-col items-center gap-3 mb-4 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
         <button
           onClick={handleLogout}
           className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition cursor-pointer"
@@ -100,11 +97,11 @@ const ProfileInfo = ({ onHandleSubmit }) => {
           <FaPowerOff size={18} />
         </button>
 
-        <div className="flex items-center gap-3 mt-4">
+        <div className="flex items-center gap-4 mt-4">
           <img
             src={userInfo.avatar}
             alt="avatar"
-            className=" w-[100px] h-[56.33px] rounded-full  dark:border-gray-600"
+            className="w-[100px] h-[56.33px] rounded-full border border-gray-300 dark:border-gray-600"
           />
           <div className="text-left">
             <p className="font-bold text-sm text-gray-800 dark:text-gray-100">
@@ -125,8 +122,8 @@ const ProfileInfo = ({ onHandleSubmit }) => {
 
   return (
     <div className="w-full flex justify-center">
-      <div className="w-full max-w-sm p-2   outline-2 outline-offset-2 outline-white dark:outline-gray-800 rounded-xl shadow-md">
-        <h2 className="font-bold mb-2 text-gray-800 dark:text-gray-100 text-center">
+      <div className="w-full max-w-sm p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
+        <h2 className="font-bold mb-3 text-gray-800 dark:text-gray-100 text-center">
           Login with Codeforces API
         </h2>
         <form
@@ -164,6 +161,16 @@ const ProfileInfo = ({ onHandleSubmit }) => {
             Authenticate
           </button>
         </form>
+        <p className="text-xs mt-3 text-center text-gray-500 dark:text-gray-400">
+          Don’t have an API Key?{" "}
+          <a
+            href="https://codeforces.com/settings/api"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline dark:text-blue-400">
+            Get it here
+          </a>
+        </p>
       </div>
     </div>
   );
