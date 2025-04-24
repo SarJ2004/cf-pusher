@@ -65,9 +65,7 @@ const syncLatestAcceptedSubmission = async (
     const cacheKey = `cf-synced-problems`;
 
     const result = await chrome.storage.sync.get([cacheKey]);
-    let syncedProblems = result[cacheKey] || {}; // Initialize to empty object if not found
-
-    // Skip syncing if already synced
+    let syncedProblems = result[cacheKey] || {};
     if (syncedProblems[submissionId]) {
       console.log(`🟡 Already synced ${folderName}, skipping...`);
       return;
@@ -102,7 +100,6 @@ const syncLatestAcceptedSubmission = async (
     });
 
     if (codePush && readmePush) {
-      // Add the new submission ID to the syncedProblems object
       syncedProblems[submissionId] = true;
       await chrome.storage.sync.set({ [cacheKey]: syncedProblems });
       console.log(`✅ Successfully pushed ${folderName}`);
