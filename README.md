@@ -63,7 +63,7 @@ A powerful and user-friendly Chrome extension that pushes your most recent Codef
 
 You can download the latest release of the extension directly from GitHub:
 
-[Download Latest Release](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.5/extension.zip)
+[Download Latest Release](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.7/extension.zip)
 
 ### Manual Installation in Chrome
 
