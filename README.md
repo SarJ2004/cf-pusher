@@ -1,9 +1,13 @@
 <div align="center">
   <a href="https://github.com/SarJ2004/cf-pusher">
-    <img src="https://res.cloudinary.com/do2max7gt/image/upload/v1745579131/ext-icon_pquhfy.png" alt="Logo" width="80" height="80">
+    <img src="https://res.cloudinary.com/do2max7gt/image/upload/v1745579131/ext-icon_pquhfy.png" alt="Logo" width="360">
   </a>
-
-<h3 align="center">CFPusher-Codeforces to GitHub</h3>
+  <br/>
+  <a href="https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael">
+    <img src="https://res.cloudinary.com/do2max7gt/image/upload/v1745580622/chrome-web-store_vkyxkm.png" alt="Logo" width="250">
+  </a>
+  
+<h1 align="center"><a href="https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael">CFPusher-Codeforces to GitHub<a/></h1>
 
   <p align="center">
     A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository
@@ -43,17 +47,30 @@
 A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository. It leverages modern web technologies and is built using [Vite](https://vitejs.dev/) for fast development builds and optimized production output.
 
 ### Screenshots
-![Popup View](https://res.cloudinary.com/do2max7gt/image/upload/v1744717130/Screenshot_2025-04-13_223724_m48xxm.png)
+![Popup View](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/1_h1bvei.png)
+<br/>
+<br/>
 *Popup showing the Codeforces login Screen*
 
-![Settings Page](https://res.cloudinary.com/do2max7gt/image/upload/v1744717131/Screenshot_2025-04-13_224538_nv3qtx.png)
+![Settings Page](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/4_f6bimu.png)
+<br/>
+<br/>
 *Settings section where you can link GitHub and manage your repo*
 
-![Post-Login Screen](https://res.cloudinary.com/do2max7gt/image/upload/v1744717131/Screenshot_2025-04-13_223701_jxnhdb.png)
-*Sample GitHub repo with pushed code*
+![Post-Login Screen](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/2_z4y5hw.png)
+<br/>
+<br/>
+*Post-Login Screen*
 
-![Successful Push](https://res.cloudinary.com/do2max7gt/image/upload/v1744717390/80f79c91-9725-483b-ac2b-e84acb300a06.png)
-*Sample GitHub repo with pushed code*
+![Streak and Solved Menu](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/3_b4vduo.png)
+<br/>
+<br/>
+*Streak chart and Solved Problems chart*
+
+![Successful Push](https://res.cloudinary.com/do2max7gt/image/upload/v1745580202/0bae78c6-043a-426f-affb-d01ef4583f1d.png)
+<br/>
+<br/>
+*Sample GitHub repo with pushed code and problem statement*
 
 ---
 
@@ -110,16 +127,13 @@ Once installed, click on the extension icon in your Chrome toolbar or follow the
 You are all set now!!
 
 ### Known Issues
-1. **Loopy Loop** 
-    The biggest one I am aware of is sometimes, the extension falls in a loop of fetching code, and fetching code and so on...I know the reason. It's because I think before the completion of current operation, the background script runs again after 30 seconds, causing it to be stuck in a loop. If you notice that the code has not been pushed to your repository withing two-three minutes at max, refresh the extension once.
-
-2. **Unable to submit codes during contests**  
+1. **Unable to submit codes during contests**  
    The api has no access to the codes submitted during the contests, so, after the contest is over(checking phase is over), you can resubmit them to push.
 
-3. **More of a Disadvantage**  
+2. **More of a Disadvantage**  
    The background script checks for new submissions every 30 seconds, but including the time to push, it takes almost a minute for the code to be available in one's repo. So, within that interval of a minute or so, if the user submits many different codes, only the most recent code gets pushed to the repo(sorry, will improve it in future, or you guys can too!).
    
-4. **Problem Statement not formatted properly in README**
+3. **Problem Statement not formatted properly in README**
    I was unsuccessful to parse the problem statement properly in the README file. For the MathJax/latex elements, you will see them repeated, and a undefined term next to it. I promise to fix the parser later on.  
    
 ---
