@@ -88,8 +88,11 @@ A powerful and user-friendly Chrome extension that pushes your most recent Codef
 ## Installation
 
 ### Downloading the Extension
+[Download from Chrome Directly](https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael)
 
-You can download the latest release of the extension directly from GitHub:
+OR,
+
+You can download the latest release of the extension directly from GitHub, and proceed with the manual installation as instructed below:
 
 [Download Latest Release](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.7/extension.zip)
 
