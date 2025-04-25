@@ -1,7 +1,18 @@
-# CFPusher
+<div align="center">
+  <a href="https://github.com/SarJ2004/cf-pusher">
+    <img src="https://res.cloudinary.com/do2max7gt/image/upload/v1745579131/ext-icon_pquhfy.png" alt="Logo" width="80" height="80">
+  </a>
 
- 
-*A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository*
+<h3 align="center">CFPusher-Codeforces to GitHub</h3>
+
+  <p align="center">
+    A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository
+    <br />
+    <a href="https://github.com/SarJ2004/cf-pusher/issues/new?template=bug_report.md">Report Bug</a>
+    &middot;
+    <a href="https://github.com/SarJ2004/cf-pusher/issues/new?template=feature_request.md">Request Feature</a>
+  </p>
+</div>
 
 ---
 
