@@ -88,7 +88,7 @@ A powerful and user-friendly Chrome extension that pushes your most recent Codef
 ## Installation
 
 ### Downloading the Extension
-[Download from the Chrome Web Store Directly into your Chrome browser](https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael)
+Download from the [Chrome Web Store](https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael) Directly into your Chrome browser
 
 OR,
 
