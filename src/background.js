@@ -1,7 +1,9 @@
 /* eslint-disable no-undef */
 import { fetchAcceptedSubmissions } from "./handlers/codeforcesHandler";
-import { getSubmissionCode } from "./handlers/getSubmissionCode";
-import { getProblemHTML } from "./handlers/codeforcesHandler";
+import {
+  getSubmissionCode,
+  getProblemStatement,
+} from "./handlers/getSubmissionCode";
 import { pushToGitHub } from "./handlers/githubHandler";
 let isSyncing = false;
 
@@ -25,13 +27,94 @@ const getExtensionFromLanguage = (language) => {
 };
 
 const cleanHTML = (html) => {
-  const cleaned = html.replace(
-    /<span[^>]*(class=["']MathJax-Span[^"']*["']|id=["']MathJax_Processed[^"']*["'])[^>]*>.*?<\/span>/g,
+  if (!html) return "Problem statement could not be retrieved.";
+
+  let cleaned = html;
+
+  // Step 1: Extract LaTeX from script tags and convert to GitHub math syntax
+  cleaned = cleaned.replace(
+    /<script\b[^>]*type=["']math\/tex["'][^>]*>(.*?)<\/script>/g,
+    (match, mathContent) => {
+      // Convert inline math to GitHub format
+      return `$${mathContent.trim()}$`;
+    }
+  );
+
+  // Step 2: Extract LaTeX from script tags with display mode
+  cleaned = cleaned.replace(
+    /<script\b[^>]*type=["']math\/tex;\s*mode=display["'][^>]*>(.*?)<\/script>/g,
+    (match, mathContent) => {
+      // Convert display math to GitHub format
+      return `$$${mathContent.trim()}$$`;
+    }
+  );
+
+  // Step 3: Remove processed MathJax spans but try to extract any remaining math
+  cleaned = cleaned.replace(
+    /<span[^>]*class=["'][^"']*MathJax[^"']*["'][^>]*>(.*?)<\/span>/g,
+    (match, content) => {
+      // Try to extract any text content from MathJax spans
+      const textContent = content.replace(/<[^>]*>/g, "").trim();
+      return textContent || "";
+    }
+  );
+
+  // Step 4: Clean up other MathJax artifacts
+  cleaned = cleaned.replace(
+    /<span[^>]*id=["']MathJax[^"']*["'][^>]*>.*?<\/span>/g,
     ""
   );
-  return cleaned.replace(
-    /<script\b[^>]*type=["']math\/tex["'][^>]*>(.*?)<\/script>/g
+
+  // Step 5: Remove MathJax configuration and other scripts
+  cleaned = cleaned.replace(/<script[^>]*MathJax[^>]*>.*?<\/script>/gs, "");
+
+  // Step 6: Convert common HTML entities and clean up formatting
+  cleaned = cleaned
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Step 7: Remove empty paragraphs and extra whitespace
+  cleaned = cleaned.replace(/<p>\s*<\/p>/g, "");
+  cleaned = cleaned.replace(/\n\s*\n/g, "\n\n");
+
+  return cleaned;
+};
+
+// Alternative: Simpler approach that preserves more HTML structure
+const simpleCleanHTML = (html) => {
+  if (!html) return "Problem statement could not be retrieved.";
+
+  let cleaned = html;
+
+  // Extract math expressions first
+  cleaned = cleaned.replace(
+    /<script\b[^>]*type=["']math\/tex["'][^>]*>(.*?)<\/script>/g,
+    (match, mathContent) => `$${mathContent.trim()}$`
   );
+
+  cleaned = cleaned.replace(
+    /<script\b[^>]*type=["']math\/tex;\s*mode=display["'][^>]*>(.*?)<\/script>/g,
+    (match, mathContent) => `$$${mathContent.trim()}$$`
+  );
+
+  // Remove all other scripts and MathJax artifacts
+  cleaned = cleaned.replace(/<script[^>]*>.*?<\/script>/gs, "");
+  cleaned = cleaned.replace(/<[^>]*MathJax[^>]*>/g, "");
+
+  // Clean up HTML entities
+  cleaned = cleaned
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, " ");
+
+  return cleaned;
 };
 
 const syncLatestAcceptedSubmission = async (
@@ -43,6 +126,7 @@ const syncLatestAcceptedSubmission = async (
 
   isSyncing = true;
   console.log("🔁 Syncing latest accepted submission...");
+  const startTime = Date.now();
 
   try {
     const accepted = await fetchAcceptedSubmissions(username, 10000);
@@ -63,6 +147,7 @@ const syncLatestAcceptedSubmission = async (
     const readmePath = `${folderName}/README.md`;
 
     const cacheKey = `cf-synced-problems`;
+    const problemCacheKey = `cf-problem-${contestId}-${index}`;
 
     const result = await chrome.storage.sync.get([cacheKey]);
     let syncedProblems = result[cacheKey] || {};
@@ -71,45 +156,119 @@ const syncLatestAcceptedSubmission = async (
       return;
     }
 
-    const code = await getSubmissionCode(contestId, submissionId);
-    if (!code) return;
+    console.log("⚡ Starting parallel fetch operations...");
+
+    // 🚀 OPTIMIZATION 1: Run code and problem fetching in parallel
+    const [codeResult, problemResult] = await Promise.allSettled([
+      getSubmissionCode(contestId, submissionId),
+      getProblemStatementCached(contestId, index, problemCacheKey),
+    ]);
+
+    // Handle code result
+    if (codeResult.status === "rejected" || !codeResult.value) {
+      console.error(
+        "❌ Failed to get submission code:",
+        codeResult.reason?.message
+      );
+      return;
+    }
+    const code = codeResult.value;
+
+    // Handle problem result (non-blocking)
+    let problemHTML = null;
+    if (problemResult.status === "fulfilled" && problemResult.value) {
+      problemHTML = problemResult.value;
+    } else {
+      console.warn(
+        "⚠️ Could not retrieve problem statement:",
+        problemResult.reason?.message
+      );
+    }
+
+    console.log("⚡ Processing content...");
+    const problemUrl = `https://codeforces.com/contest/${contestId}/problem/${index}`;
+
+    // 🚀 OPTIMIZATION 2: Use simpler HTML cleaning by default
+    const cleanedHTML = problemHTML ? simpleCleanHTML(problemHTML) : null;
+    const readmeContent = cleanedHTML
+      ? `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\n${cleanedHTML}`
+      : `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\nProblem statement could not be retrieved. Please visit the link above.`;
 
     const commitMessage = `Add ${problemName} [${index}] from Codeforces`;
-    const problemHTML = await getProblemHTML(contestId, index);
 
-    const problemUrl = `https://codeforces.com/contest/${contestId}/problem/${index}`;
-    const cleanedHTML = cleanHTML(problemHTML);
-    const readmeContent = cleanedHTML
-      ? `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n${cleanedHTML}`
-      : "Problem statement could not be retrieved.";
+    console.log("⚡ Starting parallel GitHub push operations...");
 
-    const codePush = await pushToGitHub({
-      repoFullName: linkedRepo,
-      githubToken,
-      filePath,
-      commitMessage,
-      content: code,
-    });
+    // 🚀 OPTIMIZATION 3: Push code and README in parallel
+    const [codePushResult, readmePushResult] = await Promise.allSettled([
+      pushToGitHub({
+        repoFullName: linkedRepo,
+        githubToken,
+        filePath,
+        commitMessage,
+        content: code,
+      }),
+      pushToGitHub({
+        repoFullName: linkedRepo,
+        githubToken,
+        filePath: readmePath,
+        commitMessage: `${commitMessage} (Problem Statement)`,
+        content: readmeContent,
+      }),
+    ]);
 
-    const readmePush = await pushToGitHub({
-      repoFullName: linkedRepo,
-      githubToken,
-      filePath: readmePath,
-      commitMessage: `${commitMessage} (Problem Statement)`,
-      content: readmeContent,
-    });
+    // Check results
+    const codePushSuccess =
+      codePushResult.status === "fulfilled" && codePushResult.value;
+    const readmePushSuccess =
+      readmePushResult.status === "fulfilled" && readmePushResult.value;
 
-    if (codePush && readmePush) {
+    if (codePushSuccess && readmePushSuccess) {
       syncedProblems[submissionId] = true;
       await chrome.storage.sync.set({ [cacheKey]: syncedProblems });
-      console.log(`✅ Successfully pushed ${folderName}`);
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`✅ Successfully pushed ${folderName} in ${elapsed}s`);
     } else {
       console.error(`❌ Failed to push one or more files to ${folderName}`);
+      if (codePushResult.status === "rejected") {
+        console.error("Code push error:", codePushResult.reason);
+      }
+      if (readmePushResult.status === "rejected") {
+        console.error("README push error:", readmePushResult.reason);
+      }
     }
   } catch (err) {
     console.warn("🚨 Error pushing latest accepted submission:", err);
   } finally {
     isSyncing = false;
+  }
+};
+
+// 🚀 OPTIMIZATION 4: Cached problem statement fetching
+const getProblemStatementCached = async (contestId, index, cacheKey) => {
+  try {
+    // Check cache first
+    const cached = await chrome.storage.local.get([cacheKey]);
+    if (cached[cacheKey]) {
+      console.log(
+        `📦 Using cached problem statement for ${contestId}/${index}`
+      );
+      return cached[cacheKey];
+    }
+
+    // Fetch from source
+    console.log(`🌐 Fetching problem statement for ${contestId}/${index}`);
+    const problemHTML = await getProblemStatement(contestId, index);
+
+    // Cache the result (only if successful)
+    if (problemHTML) {
+      await chrome.storage.local.set({ [cacheKey]: problemHTML });
+    }
+
+    return problemHTML;
+  } catch (error) {
+    console.error("Error in getProblemStatementCached:", error);
+    return null;
   }
 };
 

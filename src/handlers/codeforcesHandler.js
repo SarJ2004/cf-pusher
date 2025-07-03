@@ -92,39 +92,3 @@ export const fetchAcceptedSubmissions = async (username, count = 10) => {
     return [];
   }
 };
-
-export const getProblemHTML = async (contestId, index) => {
-  try {
-    const url = `https://codeforces.com/contest/${contestId}/problem/${index}`;
-    const apiURL = `https://cfpusher-backend.onrender.com/scrape?url=${encodeURIComponent(
-      url
-    )}`;
-    const res = await fetch(apiURL);
-    const data = await res.json();
-    return data.html;
-  } catch (error) {
-    console.error("Error fetching problem HTML:", error);
-    return null;
-  }
-};
-
-export const getSubmissionCode = async (contestId, submissionId) => {
-  try {
-    const url = `https://codeforces.com/contest/${contestId}/submission/${submissionId}`;
-    const apiURL = `https://cfpusher-backend.onrender.com/code?url=${encodeURIComponent(
-      url
-    )}`;
-
-    const response = await fetch(apiURL);
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch submission code");
-    }
-
-    const data = await response.json();
-    return data.code;
-  } catch (error) {
-    console.error("Error in getSubmissionCode:", error.message);
-    return null;
-  }
-};
