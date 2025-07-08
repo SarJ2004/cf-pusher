@@ -4,7 +4,7 @@ import {
   getSubmissionCode,
   getProblemStatement,
 } from "./handlers/getSubmissionCode";
-import { pushToGitHub } from "./handlers/githubHandler";
+import { pushToGitHubWithRetry } from "./handlers/githubHandler";
 let isSyncing = false;
 
 const langMapping = {
@@ -196,31 +196,52 @@ const syncLatestAcceptedSubmission = async (
 
     const commitMessage = `Add ${problemName} [${index}] from Codeforces`;
 
-    console.log("⚡ Starting parallel GitHub push operations...");
+    console.log("⚡ Starting GitHub push operations...");
 
-    // 🚀 OPTIMIZATION 3: Push code and README in parallel
-    const [codePushResult, readmePushResult] = await Promise.allSettled([
-      pushToGitHub({
-        repoFullName: linkedRepo,
-        githubToken,
-        filePath,
-        commitMessage,
-        content: code,
-      }),
-      pushToGitHub({
+    // 🚀 OPTIMIZATION 3: Push README first to create folder, then code
+    // This prevents race conditions when creating the same folder simultaneously
+
+    let codePushSuccess = false;
+    let readmePushSuccess = false;
+
+    try {
+      // Step 1: Push README first (creates the folder structure)
+      console.log("📝 Pushing README first...");
+      readmePushSuccess = await pushToGitHubWithRetry({
         repoFullName: linkedRepo,
         githubToken,
         filePath: readmePath,
         commitMessage: `${commitMessage} (Problem Statement)`,
         content: readmeContent,
-      }),
-    ]);
+      });
 
-    // Check results
-    const codePushSuccess =
-      codePushResult.status === "fulfilled" && codePushResult.value;
-    const readmePushSuccess =
-      readmePushResult.status === "fulfilled" && readmePushResult.value;
+      if (readmePushSuccess) {
+        console.log("✅ README pushed successfully");
+
+        // Small delay to ensure GitHub processes the folder creation
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        // Step 2: Push code after README succeeds (folder now exists)
+        console.log("💻 Pushing code...");
+        codePushSuccess = await pushToGitHubWithRetry({
+          repoFullName: linkedRepo,
+          githubToken,
+          filePath,
+          commitMessage,
+          content: code,
+        });
+
+        if (codePushSuccess) {
+          console.log("✅ Code pushed successfully");
+        } else {
+          console.error("❌ Code push failed after retries");
+        }
+      } else {
+        console.error("❌ README push failed, skipping code push");
+      }
+    } catch (error) {
+      console.error("❌ Error during GitHub push operations:", error);
+    }
 
     if (codePushSuccess && readmePushSuccess) {
       syncedProblems[submissionId] = true;
@@ -230,11 +251,11 @@ const syncLatestAcceptedSubmission = async (
       console.log(`✅ Successfully pushed ${folderName} in ${elapsed}s`);
     } else {
       console.error(`❌ Failed to push one or more files to ${folderName}`);
-      if (codePushResult.status === "rejected") {
-        console.error("Code push error:", codePushResult.reason);
+      if (codePushSuccess === false) {
+        console.error("Code push failed");
       }
-      if (readmePushResult.status === "rejected") {
-        console.error("README push error:", readmePushResult.reason);
+      if (readmePushSuccess === false) {
+        console.error("README push failed");
       }
     }
   } catch (err) {
