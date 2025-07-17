@@ -289,7 +289,7 @@ const Popup = () => {
         body: JSON.stringify({
           name: newRepoName,
           description: "Codeforces solutions pushed by CFPusher",
-          private: false,
+          private: true,
         }),
       });
 

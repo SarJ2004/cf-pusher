@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    types: [closed]
 
 permissions:
   contents: write
@@ -11,39 +17,38 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event.pull_request.merged == true)
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Build Extension
-        run: npm run build
-
-      - name: Extract Version
-        id: extract_version
+      - name: Install and Build
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          npm ci
+          npm run build
 
-      - name: Zip dist Folder
+      - name: Create Release Archive
         run: |
           cd dist
-          zip -r ../CFPusher-${{ steps.extract_version.outputs.version }}.zip .
+          zip -r ../CFPusher-extension.zip .
 
-      - name: Upload to GitHub Release
+      - name: Release on Tag
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          name: Release ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          files: CFPusher-${{ steps.extract_version.outputs.version }}.zip
-          draft: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: CFPusher-extension.zip
+          generate_release_notes: true
+
+      - name: Upload Build Artifact
+        if: github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          name: CFPusher-latest
+          path: CFPusher-extension.zip
