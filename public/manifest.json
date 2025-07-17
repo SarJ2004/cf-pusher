@@ -22,6 +22,6 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["identity", "storage"],
+  "permissions": ["identity", "storage", "tabs", "windows", "alarms"],
   "host_permissions": ["https://codeforces.com/*"]
 }

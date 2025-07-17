@@ -63,8 +63,9 @@ export const fetchUserInfo = async (username) => {
   }
 };
 
-export const fetchAcceptedSubmissions = async (username, count = 10) => {
+export const fetchAcceptedSubmissions = async (username, count = 20) => {
   try {
+    // 🚀 OPTIMIZATION: Use smaller count for faster API response
     const response = await fetch(
       `${CODEFORCES_API}?handle=${username}&count=${count}`
     );
@@ -76,6 +77,7 @@ export const fetchAcceptedSubmissions = async (username, count = 10) => {
     const acceptedSubmissions = data.result.filter(
       (submission) => submission.verdict === "OK"
     );
+
     return acceptedSubmissions.map((submission) => ({
       problemName: submission.problem.name,
       problemRating: submission.problem.rating || "Unrated",
@@ -83,6 +85,7 @@ export const fetchAcceptedSubmissions = async (username, count = 10) => {
       submissionTime: new Date(
         submission.creationTimeSeconds * 1000
       ).toLocaleString(),
+      submissionTimestamp: submission.creationTimeSeconds * 1000,
       contestId: submission.problem.contestId,
       index: submission.problem.index,
       id: submission.id,
@@ -90,41 +93,5 @@ export const fetchAcceptedSubmissions = async (username, count = 10) => {
   } catch (error) {
     console.error("Error fetching submissions:", error);
     return [];
-  }
-};
-
-export const getProblemHTML = async (contestId, index) => {
-  try {
-    const url = `https://codeforces.com/contest/${contestId}/problem/${index}`;
-    const apiURL = `https://cfpusher-backend.onrender.com/scrape?url=${encodeURIComponent(
-      url
-    )}`;
-    const res = await fetch(apiURL);
-    const data = await res.json();
-    return data.html;
-  } catch (error) {
-    console.error("Error fetching problem HTML:", error);
-    return null;
-  }
-};
-
-export const getSubmissionCode = async (contestId, submissionId) => {
-  try {
-    const url = `https://codeforces.com/contest/${contestId}/submission/${submissionId}`;
-    const apiURL = `https://cfpusher-backend.onrender.com/code?url=${encodeURIComponent(
-      url
-    )}`;
-
-    const response = await fetch(apiURL);
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch submission code");
-    }
-
-    const data = await response.json();
-    return data.code;
-  } catch (error) {
-    console.error("Error in getSubmissionCode:", error.message);
-    return null;
   }
 };

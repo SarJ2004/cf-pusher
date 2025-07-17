@@ -60,3 +60,34 @@ export const pushToGitHub = async ({
     return false;
   }
 };
+
+// 🚀 Enhanced version with retry logic
+export const pushToGitHubWithRetry = async (params, maxRetries = 3) => {
+  const { filePath } = params;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    console.log(`📤 Attempt ${attempt}/${maxRetries} for ${filePath}`);
+
+    const success = await pushToGitHub(params);
+
+    if (success) {
+      if (attempt > 1) {
+        console.log(`✅ Success on retry ${attempt} for ${filePath}`);
+      }
+      return true;
+    }
+
+    if (attempt < maxRetries) {
+      // Faster exponential backoff: 0.5s, 1s, 2s
+      const delay = Math.pow(2, attempt - 1) * 500;
+      console.log(`⏳ Retrying ${filePath} in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    } else {
+      console.error(
+        `❌ Failed to push ${filePath} after ${maxRetries} attempts`
+      );
+    }
+  }
+
+  return false;
+};
