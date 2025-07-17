@@ -4,6 +4,7 @@ import StreakTracker from "../components/StreakTracker";
 import ProblemChart from "../components/ProblemChart";
 import ProfileInfo from "../components/ProfileInfo";
 import { fetchAcceptedSubmissions } from "../handlers/codeforcesHandler";
+import { checkRepositoryExists } from "../handlers/githubHandler";
 import {
   Check,
   Settings,
@@ -41,6 +42,7 @@ const Popup = () => {
   const [manualSyncLoading, setManualSyncLoading] = useState(false);
   const [notification, setNotification] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isValidatingRepo, setIsValidatingRepo] = useState(false);
 
   // 🚀 IMPROVEMENT: Show notification helper
   const showNotification = (message, type = "info", duration = 3000) => {
@@ -221,31 +223,73 @@ const Popup = () => {
   };
 
   const connectToGitHub = () => {
-    chrome.identity.getAuthToken({ interactive: true }, function (token) {
-      if (chrome.runtime.lastError) {
-        console.error("OAuth Error:", chrome.runtime.lastError);
-        showNotification("Failed to connect to GitHub", "error");
-        return;
+    // Use your original OAuth flow with the /auth/github/callback endpoint
+    const CLIENT_ID = "Ov23liZwEyp8gsCsQOPb";
+    const redirectUri = chrome.identity.getRedirectURL();
+    const backendCallback =
+      "https://cfpusher-backend.onrender.com/auth/github/callback";
+    const state = encodeURIComponent(redirectUri); // Pass extension redirect as state
+
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
+      backendCallback
+    )}&state=${state}&scope=repo`;
+
+    chrome.identity.launchWebAuthFlow(
+      {
+        url: authUrl,
+        interactive: true,
+      },
+      function (redirectUrl) {
+        if (chrome.runtime.lastError) {
+          console.error("OAuth Error:", chrome.runtime.lastError);
+          showNotification("Failed to connect to GitHub", "error");
+          return;
+        }
+
+        if (redirectUrl) {
+          // Extract the token from your backend's redirect
+          const url = new URL(redirectUrl);
+          const token = url.searchParams.get("token");
+
+          if (token) {
+            validateAndSetToken(token);
+          } else {
+            showNotification("GitHub authorization failed", "error");
+          }
+        }
       }
+    );
+  };
 
-      console.log("OAuth Token received");
-      setGithubToken(token);
-      chrome.storage.sync.set({ githubToken: token });
+  const connectWithToken = async (token) => {
+    if (!token) {
+      showNotification("Please enter a valid token", "error");
+      return;
+    }
+    await validateAndSetToken(token);
+  };
 
-      fetch("https://api.github.com/user", {
+  const validateAndSetToken = async (token) => {
+    try {
+      // Validate the token by fetching user info
+      const userResponse = await fetch("https://api.github.com/user", {
         headers: { Authorization: `token ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("GitHub user data:", data);
-          setGithubUsername(data.login);
-          showNotification(`Connected to GitHub as ${data.login}`, "success");
-        })
-        .catch((err) => {
-          console.error("Failed to fetch GitHub user:", err);
-          showNotification("Failed to fetch GitHub user info", "error");
-        });
-    });
+      });
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+
+        setGithubToken(token);
+        chrome.storage.sync.set({ githubToken: token });
+        setGithubUsername(userData.login);
+        showNotification(`Connected to GitHub as ${userData.login}`, "success");
+      } else {
+        showNotification("Invalid GitHub token", "error");
+      }
+    } catch (error) {
+      console.error("Token validation error:", error);
+      showNotification("Failed to validate GitHub token", "error");
+    }
   };
 
   const disconnectFromGitHub = () => {
@@ -258,19 +302,42 @@ const Popup = () => {
     });
   };
 
-  const linkRepository = () => {
+  const linkRepository = async () => {
     if (!repoInput.trim()) {
       showNotification("Please enter a repository name", "error");
       return;
     }
 
-    chrome.storage.sync.set({ linkedRepo: repoInput }, () => {
-      setLinkedRepo(repoInput);
+    // 🚀 CRITICAL: Validate repository exists before linking
+    setIsValidatingRepo(true);
+    try {
+      console.log(`🔍 Validating repository: ${repoInput}`);
+      const repoCheck = await checkRepositoryExists(repoInput, githubToken);
+
+      if (repoCheck.exists) {
+        chrome.storage.sync.set({ linkedRepo: repoInput }, () => {
+          setLinkedRepo(repoInput);
+          showNotification(
+            `Repository ${repoInput} validated and linked successfully!`,
+            "success"
+          );
+        });
+      } else {
+        showNotification(
+          `Repository ${repoInput} does not exist or you don't have access to it. Please check the repository name or create it first.`,
+          "error",
+          5000
+        );
+      }
+    } catch (error) {
+      console.error("Error validating repository:", error);
       showNotification(
-        `Repository ${repoInput} linked successfully!`,
-        "success"
+        "Failed to validate repository. Please check your connection and try again.",
+        "error"
       );
-    });
+    } finally {
+      setIsValidatingRepo(false);
+    }
   };
 
   const createAndLinkRepository = async () => {
@@ -403,12 +470,38 @@ const Popup = () => {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={connectToGitHub}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors">
-                <FaGithub className="w-4 h-4" />
-                Connect to GitHub
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={connectToGitHub}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors">
+                  <FaGithub className="w-4 h-4" />
+                  Connect with OAuth
+                </button>
+
+                <div className="text-xs text-center text-gray-500 dark:text-gray-400">
+                  or
+                </div>
+
+                <div>
+                  <input
+                    type="password"
+                    placeholder="GitHub Personal Access Token"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        connectWithToken(e.target.value.trim());
+                      }
+                    }}
+                  />
+                  <a
+                    href="https://github.com/settings/tokens/new?scopes=repo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 block">
+                    Create token here (needs 'repo' scope)
+                  </a>
+                </div>
+              </div>
             )}
           </div>
 
@@ -438,13 +531,25 @@ const Popup = () => {
                       onChange={(e) => setRepoInput(e.target.value)}
                       placeholder="username/repository"
                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+                      disabled={isValidatingRepo}
                     />
                     <button
                       onClick={linkRepository}
-                      className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors">
-                      Link
+                      disabled={isValidatingRepo}
+                      className="px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg text-sm transition-colors flex items-center gap-1">
+                      {isValidatingRepo ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Checking...
+                        </>
+                      ) : (
+                        "Link"
+                      )}
                     </button>
                   </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Repository will be validated before linking
+                  </p>
                 </div>
 
                 <div>
