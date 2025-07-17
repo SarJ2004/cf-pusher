@@ -63,8 +63,9 @@ export const fetchUserInfo = async (username) => {
   }
 };
 
-export const fetchAcceptedSubmissions = async (username, count = 10) => {
+export const fetchAcceptedSubmissions = async (username, count = 20) => {
   try {
+    // 🚀 OPTIMIZATION: Use smaller count for faster API response
     const response = await fetch(
       `${CODEFORCES_API}?handle=${username}&count=${count}`
     );
@@ -76,6 +77,7 @@ export const fetchAcceptedSubmissions = async (username, count = 10) => {
     const acceptedSubmissions = data.result.filter(
       (submission) => submission.verdict === "OK"
     );
+
     return acceptedSubmissions.map((submission) => ({
       problemName: submission.problem.name,
       problemRating: submission.problem.rating || "Unrated",
@@ -83,6 +85,7 @@ export const fetchAcceptedSubmissions = async (username, count = 10) => {
       submissionTime: new Date(
         submission.creationTimeSeconds * 1000
       ).toLocaleString(),
+      submissionTimestamp: submission.creationTimeSeconds * 1000,
       contestId: submission.problem.contestId,
       index: submission.problem.index,
       id: submission.id,

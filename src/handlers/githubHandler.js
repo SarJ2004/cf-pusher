@@ -78,8 +78,8 @@ export const pushToGitHubWithRetry = async (params, maxRetries = 3) => {
     }
 
     if (attempt < maxRetries) {
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = Math.pow(2, attempt - 1) * 1000;
+      // Faster exponential backoff: 0.5s, 1s, 2s
+      const delay = Math.pow(2, attempt - 1) * 500;
       console.log(`⏳ Retrying ${filePath} in ${delay}ms...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     } else {

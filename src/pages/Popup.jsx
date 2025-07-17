@@ -4,11 +4,21 @@ import StreakTracker from "../components/StreakTracker";
 import ProblemChart from "../components/ProblemChart";
 import ProfileInfo from "../components/ProfileInfo";
 import { fetchAcceptedSubmissions } from "../handlers/codeforcesHandler";
-import { Check, Settings } from "lucide-react";
+import {
+  Check,
+  Settings,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Sun,
+  Moon,
+} from "lucide-react";
 import { AiOutlineDisconnect, AiOutlineLogout } from "react-icons/ai";
 import { FaGithub, FaEnvelope } from "react-icons/fa6";
 import logoLight from "../assets/logo-light.png";
 import logoDark from "../assets/logo-dark.png";
+
 const Popup = () => {
   const [solvedDays, setSolvedDays] = useState([]);
   const [solvedData, setSolvedData] = useState([]);
@@ -20,7 +30,23 @@ const Popup = () => {
   const [newRepoName, setNewRepoName] = useState("");
   const [githubUsername, setGithubUsername] = useState("");
 
+  // 🚀 IMPROVEMENT: Enhanced state management for better UX
+  const [syncStatus, setSyncStatus] = useState({
+    isActive: false,
+    isSyncing: false,
+    lastSync: null,
+    error: null,
+  });
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [manualSyncLoading, setManualSyncLoading] = useState(false);
+  const [notification, setNotification] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // 🚀 IMPROVEMENT: Show notification helper
+  const showNotification = (message, type = "info", duration = 3000) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), duration);
+  };
 
   useEffect(() => {
     chrome.storage.sync.get(["darkMode"], (result) => {
@@ -48,8 +74,12 @@ const Popup = () => {
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem("cf_handle");
-    if (stored) setUsername(stored);
+    // Get handle from chrome.storage.sync instead of localStorage
+    chrome.storage.sync.get(["cf_handle"], (result) => {
+      if (result.cf_handle) {
+        setUsername(result.cf_handle);
+      }
+    });
 
     chrome.storage.sync.get("githubToken", (result) => {
       if (result.githubToken) {
@@ -58,189 +88,483 @@ const Popup = () => {
     });
   }, []);
 
+  // 🚀 IMPROVEMENT: Fetch GitHub username when token exists but username is missing
+  useEffect(() => {
+    if (githubToken && !githubUsername) {
+      fetch("https://api.github.com/user", {
+        headers: { Authorization: `token ${githubToken}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.login) {
+            setGithubUsername(data.login);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch GitHub username:", err);
+        });
+    }
+  }, [githubToken, githubUsername]);
+
+  // 🚀 IMPROVEMENT: Update sync status based on credentials
+  useEffect(() => {
+    const isActive = !!(username && githubToken && linkedRepo);
+    setSyncStatus((prev) => ({
+      ...prev,
+      isActive: isActive,
+    }));
+  }, [username, githubToken, linkedRepo]);
+
+  // 🚀 IMPROVEMENT: Enhanced data fetching with better loading states
   useEffect(() => {
     if (!username) return;
-    const fetchData = async () => {
-      const accepted = await fetchAcceptedSubmissions(username, 10000);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const pastWeek = Array(7).fill(false);
-      accepted.forEach((submission) => {
-        const submissionDate = new Date(submission.submissionTime);
-        submissionDate.setHours(0, 0, 0, 0);
-        const diff = Math.floor(
-          (today - submissionDate) / (1000 * 60 * 60 * 24)
-        );
-        if (diff >= 0 && diff < 7) pastWeek[6 - diff] = true;
-      });
-      setSolvedDays(pastWeek);
 
-      const ratingMap = accepted.reduce((acc, submission) => {
-        const rating = submission.problemRating || "Unrated";
-        if (!acc[rating]) acc[rating] = { name: rating, count: 0 };
-        acc[rating].count += 1;
-        return acc;
-      }, {});
-      setSolvedData(Object.values(ratingMap));
+    const fetchData = async () => {
+      setIsLoadingData(true);
+      try {
+        console.log("🔍 Fetching user data for:", username);
+        const accepted = await fetchAcceptedSubmissions(username, 10000);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const pastWeek = Array(7).fill(false);
+
+        console.log("🔍 Streak Debug - Today:", today.toDateString());
+        console.log(
+          "🔍 Streak Debug - Total accepted submissions:",
+          accepted.length
+        );
+
+        accepted.forEach((submission, index) => {
+          // Use the raw timestamp if available, otherwise parse the formatted string
+          const submissionDate = submission.submissionTimestamp
+            ? new Date(submission.submissionTimestamp)
+            : new Date(submission.submissionTime);
+          submissionDate.setHours(0, 0, 0, 0);
+
+          const diff = Math.floor(
+            (today - submissionDate) / (1000 * 60 * 60 * 24)
+          );
+
+          if (diff >= 0 && diff < 7) {
+            pastWeek[6 - diff] = true;
+            console.log(`🔍 Streak Debug - Submission ${index + 1}:`, {
+              problem: submission.problemName,
+              date: submissionDate.toDateString(),
+              daysAgo: diff,
+              slotIndex: 6 - diff,
+            });
+          }
+        });
+
+        console.log("🔍 Streak Debug - Final pastWeek array:", pastWeek);
+        setSolvedDays(pastWeek);
+
+        const ratingMap = accepted.reduce((acc, submission) => {
+          const rating = submission.problemRating || "Unrated";
+          if (!acc[rating]) acc[rating] = { name: rating, count: 0 };
+          acc[rating].count += 1;
+          return acc;
+        }, {});
+
+        setSolvedData(Object.values(ratingMap));
+
+        // Update sync status
+        setSyncStatus((prev) => ({
+          ...prev,
+          lastSync: new Date().toLocaleTimeString(),
+          error: null,
+        }));
+      } catch (error) {
+        console.error("❌ Error fetching data:", error);
+        showNotification("Failed to fetch data from Codeforces", "error");
+        setSyncStatus((prev) => ({
+          ...prev,
+          error: "Failed to fetch data",
+        }));
+      } finally {
+        setIsLoadingData(false);
+      }
     };
+
     fetchData();
   }, [username]);
 
-  useEffect(() => {
-    if (!githubToken) return;
-    const fetchUsername = async () => {
-      try {
-        const res = await fetch("https://api.github.com/user", {
-          headers: {
-            Authorization: `token ${githubToken}`,
-            Accept: "application/vnd.github+json",
-          },
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          console.error("Failed to fetch GitHub username:", err);
-          return;
-        }
-        const data = await res.json();
-        setGithubUsername(data.login);
-      } catch (err) {
-        console.error("Error fetching GitHub username:", err);
+  // 🚀 IMPROVEMENT: Manual sync functionality
+  const handleManualSync = async () => {
+    setManualSyncLoading(true);
+    try {
+      const response = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action: "manualSync" }, resolve);
+      });
+
+      if (response.success) {
+        showNotification("Sync completed successfully!", "success");
+        setSyncStatus((prev) => ({
+          ...prev,
+          lastSync: new Date().toLocaleTimeString(),
+          error: null,
+        }));
+      } else {
+        showNotification(response.error || "Sync failed", "error");
+        setSyncStatus((prev) => ({
+          ...prev,
+          error: response.error || "Sync failed",
+        }));
       }
-    };
-    fetchUsername();
-  }, [githubToken]);
-
-  const handleGitHubAuth = (interactive = true) => {
-    const clientId = "Ov23liZwEyp8gsCsQOPb";
-    const backendCallback = `https://cfpusher-backend.onrender.com/auth/github/callback`;
-    const redirectUri = chrome.identity.getRedirectURL();
-    const state = encodeURIComponent(redirectUri); // stash redirectUri in state
-
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${backendCallback}&state=${state}&scope=repo`;
-
-    chrome.identity.launchWebAuthFlow(
-      {
-        url: authUrl,
-        interactive: Boolean(interactive),
-      },
-      (redirectUrl) => {
-        if (chrome.runtime.lastError) {
-          console.error("Auth Error:", chrome.runtime.lastError.message);
-          return;
-        }
-
-        if (redirectUrl) {
-          const url = new URL(redirectUrl);
-          const accessToken = url.searchParams.get("token");
-          if (accessToken) {
-            chrome.storage.sync.set({ githubToken: accessToken });
-            setGithubToken(accessToken);
-          } else {
-            console.warn("No token found in redirect URL");
-          }
-        }
-      }
-    );
+    } catch (error) {
+      console.error("Manual sync error:", error);
+      showNotification("Failed to trigger sync", "error");
+    } finally {
+      setManualSyncLoading(false);
+    }
   };
 
-  const handleDisconnectGitHub = () => {
-    chrome.storage.sync.remove("githubToken", () => {
-      console.log("GitHub token removed");
-      setGithubToken(null);
+  const connectToGitHub = () => {
+    chrome.identity.getAuthToken({ interactive: true }, function (token) {
+      if (chrome.runtime.lastError) {
+        console.error("OAuth Error:", chrome.runtime.lastError);
+        showNotification("Failed to connect to GitHub", "error");
+        return;
+      }
+
+      console.log("OAuth Token received");
+      setGithubToken(token);
+      chrome.storage.sync.set({ githubToken: token });
+
+      fetch("https://api.github.com/user", {
+        headers: { Authorization: `token ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("GitHub user data:", data);
+          setGithubUsername(data.login);
+          showNotification(`Connected to GitHub as ${data.login}`, "success");
+        })
+        .catch((err) => {
+          console.error("Failed to fetch GitHub user:", err);
+          showNotification("Failed to fetch GitHub user info", "error");
+        });
     });
   };
 
-  const handleLinkRepo = async () => {
-    const trimmedRepo = repoInput.trim();
-    if (!trimmedRepo) {
-      alert("Please enter a valid repo name.");
-      return;
-    }
-    try {
-      const userRes = await fetch("https://api.github.com/user", {
-        headers: {
-          Authorization: `token ${githubToken}`,
-          Accept: "application/vnd.github+json",
-        },
-      });
-      if (!userRes.ok) {
-        const err = await userRes.json();
-        console.error("Failed to fetch GitHub user:", err);
-        alert("Could not fetch GitHub username.");
-        return;
-      }
-      const userData = await userRes.json();
-      const fullName = `${userData.login}/${trimmedRepo}`;
-      chrome.storage.sync.set({ linkedRepo: fullName }, () => {
-        setLinkedRepo(fullName);
-        setRepoInput(fullName);
-      });
-    } catch (err) {
-      console.error("Error linking repo:", err);
-    }
+  const disconnectFromGitHub = () => {
+    chrome.storage.sync.remove(["githubToken", "linkedRepo"], () => {
+      setGithubToken(null);
+      setLinkedRepo("");
+      setRepoInput("");
+      setGithubUsername("");
+      showNotification("Disconnected from GitHub", "info");
+    });
   };
 
-  const handleCreateAndLinkRepo = async () => {
-    const trimmedName = newRepoName.trim();
-    if (!trimmedName) return;
+  const linkRepository = () => {
+    if (!repoInput.trim()) {
+      showNotification("Please enter a repository name", "error");
+      return;
+    }
+
+    chrome.storage.sync.set({ linkedRepo: repoInput }, () => {
+      setLinkedRepo(repoInput);
+      showNotification(
+        `Repository ${repoInput} linked successfully!`,
+        "success"
+      );
+    });
+  };
+
+  const createAndLinkRepository = async () => {
+    if (!newRepoName.trim()) {
+      showNotification("Please enter a repository name", "error");
+      return;
+    }
+
     try {
-      const userRes = await fetch("https://api.github.com/user", {
-        headers: {
-          Authorization: `token ${githubToken}`,
-          Accept: "application/vnd.github+json",
-        },
-      });
-      if (!userRes.ok) {
-        const err = await userRes.json();
-        console.error("Failed to fetch GitHub user:", err);
-        alert("Could not fetch GitHub username.");
-        return;
-      }
-      const userData = await userRes.json();
-      const username = userData.login;
-      console.log("GitHub username:", username);
-      const createRes = await fetch("https://api.github.com/user/repos", {
+      const response = await fetch("https://api.github.com/user/repos", {
         method: "POST",
         headers: {
           Authorization: `token ${githubToken}`,
-          Accept: "application/vnd.github+json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: trimmedName,
-          private: true,
-          auto_init: true,
+          name: newRepoName,
+          description: "Codeforces solutions pushed by CFPusher",
+          private: false,
         }),
       });
-      if (!createRes.ok) {
-        const err = await createRes.json();
-        console.error("Repo creation error:", err);
-        alert(`Failed to create repo: ${err.message || JSON.stringify(err)}`);
-        return;
-      }
-      const createdRepo = await createRes.json();
-      const fullName = `${username}/${createdRepo.name}`;
-      chrome.storage.sync.set({ linkedRepo: fullName }, () => {
+
+      if (response.ok) {
+        const data = await response.json();
+        const fullName = data.full_name;
         setLinkedRepo(fullName);
         setRepoInput(fullName);
-      });
-    } catch (err) {
-      console.error("Error:", err);
-      alert("Something went wrong while creating the repo.");
+        setNewRepoName("");
+
+        chrome.storage.sync.set({ linkedRepo: fullName });
+        showNotification(
+          `Repository ${fullName} created and linked!`,
+          "success"
+        );
+      } else {
+        const errorData = await response.json();
+        showNotification(
+          errorData.message || "Failed to create repository",
+          "error"
+        );
+      }
+    } catch (error) {
+      console.error("Error creating repository:", error);
+      showNotification("Failed to create repository", "error");
     }
   };
 
-  const toggleGitHubPopup = () => {
-    setsetshowSettings(!setshowSettings);
+  // 🚀 IMPROVEMENT: Notification component
+  const NotificationComponent = () => {
+    if (!notification) return null;
+
+    const getIcon = () => {
+      switch (notification.type) {
+        case "success":
+          return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        case "error":
+          return <AlertCircle className="w-4 h-4 text-red-500" />;
+        default:
+          return <AlertCircle className="w-4 h-4 text-blue-500" />;
+      }
+    };
+
+    const getBgColor = () => {
+      switch (notification.type) {
+        case "success":
+          return "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
+        case "error":
+          return "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
+        default:
+          return "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
+      }
+    };
+
+    return (
+      <div
+        className={`fixed top-4 left-4 right-4 p-3 rounded-lg border ${getBgColor()} flex items-center gap-2 z-50 transition-all duration-300`}>
+        {getIcon()}
+        <span className="text-sm text-gray-700 dark:text-gray-200">
+          {notification.message}
+        </span>
+      </div>
+    );
   };
 
+  if (setshowSettings) {
+    return (
+      <div className="w-96 min-h-[500px] bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 relative transition-colors duration-300">
+        <NotificationComponent />
+
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="font-bold text-lg">Settings</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+              {isDarkMode ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
+            <button
+              onClick={() => setsetshowSettings(false)}
+              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+              ←
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* GitHub Connection Status */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <FaGithub className="w-5 h-5" />
+              GitHub Connection
+            </h3>
+
+            {githubToken ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                  <Check className="w-4 h-4" />
+                  <span className="text-sm">Connected as {githubUsername}</span>
+                </div>
+                <button
+                  onClick={disconnectFromGitHub}
+                  className="flex items-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+                  <AiOutlineDisconnect className="w-4 h-4" />
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={connectToGitHub}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors">
+                <FaGithub className="w-4 h-4" />
+                Connect to GitHub
+              </button>
+            )}
+          </div>
+
+          {/* Repository Management */}
+          {githubToken && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+              <h3 className="font-semibold mb-3">Repository Settings</h3>
+
+              {linkedRepo && (
+                <div className="mb-3 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="w-4 h-4" />
+                    <span className="text-sm">Linked: {linkedRepo}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Link Existing Repository
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={repoInput}
+                      onChange={(e) => setRepoInput(e.target.value)}
+                      placeholder="username/repository"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+                    />
+                    <button
+                      onClick={linkRepository}
+                      className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors">
+                      Link
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Create New Repository
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newRepoName}
+                      onChange={(e) => setNewRepoName(e.target.value)}
+                      placeholder="repository-name"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800"
+                    />
+                    <button
+                      onClick={createAndLinkRepository}
+                      className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition-colors">
+                      Create
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sync Status */}
+          {username && githubToken && linkedRepo && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+              <h3 className="font-semibold mb-3">Sync Status</h3>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Auto Sync
+                  </span>
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm">Active</span>
+                  </div>
+                </div>
+
+                {syncStatus.lastSync && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Last Sync
+                    </span>
+                    <span className="text-sm">{syncStatus.lastSync}</span>
+                  </div>
+                )}
+
+                {syncStatus.error && (
+                  <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <span className="text-sm text-red-600 dark:text-red-400">
+                      {syncStatus.error}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative  bg-white dark:bg-gray-900 dark:text-white flex flex-col items-center p-8 pt-0 w-96 ">
-      <button
-        onClick={toggleGitHubPopup}
-        className="absolute top-2 right-2 hover:text-black text-gray-500 dark:text-gray-300 dark:hover:text-white cursor-pointer">
-        <Settings size={20} />
-      </button>
+    <div className="w-96 min-h-[500px] bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 relative transition-colors duration-300">
+      <NotificationComponent />
+
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          {username && githubToken && linkedRepo && (
+            <button
+              onClick={handleManualSync}
+              disabled={manualSyncLoading}
+              className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
+                manualSyncLoading
+                  ? "bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                  : syncStatus.error
+                  ? "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
+                  : syncStatus.isActive
+                  ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
+                  : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
+              }`}
+              title={`Manual Sync - ${
+                manualSyncLoading
+                  ? "Syncing..."
+                  : syncStatus.error
+                  ? "Sync has errors"
+                  : syncStatus.isActive
+                  ? "Sync is active"
+                  : "Sync is inactive - missing credentials"
+              }`}>
+              {manualSyncLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+            {isDarkMode ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </button>
+          <button
+            onClick={() => setsetshowSettings(true)}
+            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
 
       <div className="flex flex-col items-center relative">
         <img
@@ -253,14 +577,25 @@ const Popup = () => {
           alt="Logo"
           className="hidden dark:block w-32 h-auto"
         />
-        <p className="mt-2 mb-2 font-bold text-2xl  text-gray-800 dark:text-gray-200 absolute top-20">
+        <p className="mt-2 mb-2 font-bold text-2xl text-gray-800 dark:text-gray-200 absolute top-20">
           CFPusher
         </p>
 
         <ProfileInfo onHandleSubmit={setUsername} username={username} />
       </div>
 
-      {username && (
+      {/* Loading State */}
+      {isLoadingData && username && (
+        <div className="flex items-center justify-center py-8">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Loading your data...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Data Display */}
+      {username && !isLoadingData && (
         <>
           <StreakTracker solvedDays={solvedDays} />
           <ProblemChart solvedData={solvedData} />
@@ -277,6 +612,7 @@ const Popup = () => {
           codeforces.com
         </a>
       </p>
+
       <p className="text-xs text-center mt-2 text-gray-600 dark:text-gray-400 flex flex-row items-center justify-center gap-3">
         <span className="flex items-center gap-1">
           <FaGithub size={12} />
@@ -298,118 +634,6 @@ const Popup = () => {
           </a>
         </span>
       </p>
-
-      {setshowSettings && (
-        <div className="absolute top-10 right-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 w-[270px] z-10 border border-gray-200 dark:border-gray-700 flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Settings size={18} />
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                Settings
-              </p>
-            </div>
-          </div>
-
-          {githubToken ? (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <FaGithub size={20} />
-                  <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                    @{githubUsername}
-                  </span>
-                  <Check size={16} color="green" />
-                </div>
-                <button
-                  onClick={handleDisconnectGitHub}
-                  title="Disconnect GitHub"
-                  className="text-gray-400 hover:text-red-500 transition cursor-pointer font-extrabold">
-                  <AiOutlineLogout size={20} />
-                </button>
-              </div>
-
-              {linkedRepo ? (
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-700 dark:text-gray-200">
-                    Linked Repo:
-                    <span className="font-medium ml-1">{linkedRepo}</span>
-                  </p>
-                  <button
-                    onClick={() => {
-                      chrome.storage.sync.remove("linkedRepo", () => {
-                        setLinkedRepo("");
-                        setRepoInput("");
-                      });
-                    }}
-                    title="Unlink Repo"
-                    className="text-gray-400 hover:text-red-500 cursor-pointer transition font-extrabold">
-                    <AiOutlineDisconnect size={20} />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      value={repoInput}
-                      onChange={(e) => setRepoInput(e.target.value)}
-                      placeholder="Link existing repo"
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-black dark:text-white"
-                    />
-                    <button
-                      onClick={handleLinkRepo}
-                      className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-1.5 rounded transition cursor-pointer">
-                      Link Repo
-                    </button>
-                  </div>
-
-                  <div>
-                    <input
-                      type="text"
-                      value={newRepoName}
-                      onChange={(e) => setNewRepoName(e.target.value)}
-                      placeholder="New repo name"
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-black dark:text-white"
-                    />
-                    <button
-                      onClick={handleCreateAndLinkRepo}
-                      className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white text-sm py-1.5 rounded transition cursor-pointer">
-                      Create & Link
-                    </button>
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <button
-              onClick={handleGitHubAuth}
-              className="w-full p-2 mb-2 rounded text-lg font-md text-white bg-gray-900 hover:bg-gray-800 dark:bg-gray-300 dark:text-black dark:hover:bg-gray-200 transition-colors cursor-pointer">
-              Connect to GitHub
-            </button>
-          )}
-          <div className="mb-4 mt-2 w-full flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              Dark Mode
-            </span>
-            <label className="inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={isDarkMode}
-                onChange={toggleDarkMode}
-              />
-              <div className="w-10 h-5 bg-gray-300 dark:bg-gray-600 rounded-full relative transition-all duration-300">
-                <div
-                  className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform duration-300 ${
-                    isDarkMode ? "translate-x-5" : "translate-x-0.5"
-                  }`}
-                />
-              </div>
-            </label>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
