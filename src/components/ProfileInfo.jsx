@@ -14,7 +14,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
   const [showSecret, setShowSecret] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // 🚀 IMPROVEMENT: Auto-authentication on component mount
   useEffect(() => {
     chrome.storage.sync.get(
       ["cf_apiKey", "cf_apiSecret", "cf_handle"],
@@ -47,7 +46,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
     );
   }, [onHandleSubmit]);
 
-  // 🚀 IMPROVEMENT: Enhanced form validation
   const validateForm = () => {
     const errors = {};
 
@@ -72,8 +70,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
-  // 🚀 IMPROVEMENT: Enhanced login handler with better error handling
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -89,7 +85,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
       const user = await fetchUserInfoWithAuth(apiKey, apiSecret, handleInput);
       setUserInfo(user);
 
-      // Store credentials
       chrome.storage.sync.set(
         { cf_apiKey: apiKey, cf_apiSecret: apiSecret, cf_handle: handleInput },
         () => {
@@ -104,7 +99,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
     } catch (err) {
       console.error("Authentication failed:", err);
 
-      // 🚀 IMPROVEMENT: Better error messaging
       const errorMessage = err.message || "Authentication failed";
       if (errorMessage.includes("Invalid API key")) {
         setError("Invalid API key or secret. Please check your credentials.");
@@ -120,7 +114,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
     }
   };
 
-  // 🚀 IMPROVEMENT: Enhanced logout handler
   const handleLogout = () => {
     chrome.storage.sync.remove(
       ["cf_apiKey", "cf_apiSecret", "cf_handle"],
@@ -140,7 +133,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
     onHandleSubmit(null);
   };
 
-  // 🚀 IMPROVEMENT: Loading state component
   if (loading) {
     return (
       <div className="w-full flex justify-center py-8">
@@ -154,7 +146,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
     );
   }
 
-  // 🚀 IMPROVEMENT: Enhanced authenticated user display
   if (userInfo) {
     const getRankColor = (rank) => {
       if (!rank) return "text-gray-600 dark:text-gray-400";
@@ -239,7 +230,6 @@ const ProfileInfo = ({ onHandleSubmit }) => {
     );
   }
 
-  // 🚀 IMPROVEMENT: Enhanced login form
   return (
     <div className="w-full flex justify-center mb-6">
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6 transition-all duration-300">

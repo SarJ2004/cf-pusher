@@ -65,7 +65,6 @@ export const fetchUserInfo = async (username) => {
 
 export const fetchAcceptedSubmissions = async (username, count = 20) => {
   try {
-    // 🚀 OPTIMIZATION: Use smaller count for faster API response
     const response = await fetch(
       `${CODEFORCES_API}?handle=${username}&count=${count}`
     );

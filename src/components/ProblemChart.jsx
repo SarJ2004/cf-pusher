@@ -8,22 +8,20 @@ import {
   Legend,
 } from "recharts";
 
-// 🚀 IMPROVEMENT: Enhanced color palette with better accessibility
 const COLORS = [
-  "#22c55e", // Green - Easy problems
-  "#84cc16", // Lime - 800-900
-  "#eab308", // Yellow - 1000-1100
-  "#f59e0b", // Amber - 1200-1300
-  "#f97316", // Orange - 1400-1500
-  "#ef4444", // Red - 1600-1700
-  "#ec4899", // Pink - 1800-1900
-  "#a855f7", // Purple - 2000-2100
-  "#6366f1", // Indigo - 2200-2300
-  "#0ea5e9", // Blue - 2400+
-  "#64748b", // Gray - Unrated
+  "#22c55e",
+  "#84cc16",
+  "#eab308",
+  "#f59e0b",
+  "#f97316",
+  "#ef4444",
+  "#ec4899",
+  "#a855f7",
+  "#6366f1",
+  "#0ea5e9",
+  "#64748b",
 ];
 
-// 🚀 IMPROVEMENT: Enhanced custom tooltip with better styling
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const { name, count } = payload[0].payload;
@@ -51,7 +49,6 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-// 🚀 IMPROVEMENT: Custom legend component
 const CustomLegend = ({ payload }) => {
   if (!payload || payload.length === 0) return null;
 
@@ -77,7 +74,6 @@ const CustomLegend = ({ payload }) => {
 };
 
 const ProblemChart = ({ solvedData = [] }) => {
-  // 🚀 IMPROVEMENT: Handle empty state with better messaging
   if (!solvedData || solvedData.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 transition-all duration-300 shadow-sm border border-gray-100 dark:border-gray-800">
@@ -101,21 +97,18 @@ const ProblemChart = ({ solvedData = [] }) => {
     );
   }
 
-  // 🚀 IMPROVEMENT: Enhanced data processing with percentages
   const sortedSolvedData = [...solvedData].sort((a, b) => {
     if (a.name === "Unrated") return 1;
     if (b.name === "Unrated") return -1;
     return parseInt(a.name) - parseInt(b.name);
   });
 
-  // Calculate total and add percentages
   const total = sortedSolvedData.reduce((sum, entry) => sum + entry.count, 0);
   const dataWithPercentages = sortedSolvedData.map((entry) => ({
     ...entry,
     percentage: ((entry.count / total) * 100).toFixed(1),
   }));
 
-  // 🚀 IMPROVEMENT: Statistics summary
   const getStats = () => {
     const ratedProblems = dataWithPercentages.filter(
       (item) => item.name !== "Unrated"

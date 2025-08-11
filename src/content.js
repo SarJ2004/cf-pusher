@@ -1,9 +1,3 @@
-/* eslint-disable no-undef */
-
-// 🚀 IMPROVED Content script for extracting submission code and problem statements
-// Optimized for better performance and reliability
-
-// Helper function to safely send results back to background script
 const sendResult = (type, data, error = null) => {
   try {
     const message = {
@@ -13,7 +7,6 @@ const sendResult = (type, data, error = null) => {
       timestamp: Date.now(),
     };
 
-    // Add data with the correct property name based on type
     if (type === "SUBMISSION_CODE") {
       message.code = data;
     } else if (type === "PROBLEM_STATEMENT") {
@@ -28,15 +21,13 @@ const sendResult = (type, data, error = null) => {
   }
 };
 
-// 🚀 IMPROVEMENT: Enhanced submission code extraction with better selectors
 const extractSubmissionCode = () => {
-  // Multiple selector strategies for better reliability
   const selectors = [
     "pre#program-source-text",
     "pre.prettyprint",
     ".source pre",
     "#program-source-text",
-    'pre:contains("main")', // Fallback for code blocks
+    'pre:contains("main")',
   ];
 
   for (const selector of selectors) {
@@ -51,7 +42,6 @@ const extractSubmissionCode = () => {
     }
   }
 
-  // 🚀 Fallback: Look for any pre element with substantial content
   const allPre = document.querySelectorAll("pre");
   for (const pre of allPre) {
     const content = pre.textContent.trim();
@@ -69,9 +59,7 @@ const extractSubmissionCode = () => {
   return null;
 };
 
-// 🚀 IMPROVEMENT: Enhanced problem statement extraction
 const extractProblemStatement = () => {
-  // Multiple strategies for different page layouts
   const selectors = [
     ".problem-statement",
     ".problemtext",
@@ -93,7 +81,6 @@ const extractProblemStatement = () => {
     }
   }
 
-  // 🚀 Fallback: Look for main content area
   try {
     const mainContent = document.querySelector(".main-content, .content, main");
     if (mainContent && mainContent.innerHTML.trim()) {
@@ -107,9 +94,7 @@ const extractProblemStatement = () => {
   return null;
 };
 
-// 🚀 IMPROVEMENT: Quick extraction check (runs immediately)
 const quickExtract = () => {
-  // Check if this is a submission page
   if (window.location.pathname.includes("/submission/")) {
     const code = extractSubmissionCode();
     if (code) {
@@ -118,7 +103,6 @@ const quickExtract = () => {
     }
   }
 
-  // Check if this is a problem page
   if (window.location.pathname.includes("/problem/")) {
     const problemHTML = extractProblemStatement();
     if (problemHTML) {
@@ -130,12 +114,9 @@ const quickExtract = () => {
   return false;
 };
 
-// 🚀 IMPROVEMENT: Main extraction logic with better error handling
 const attemptExtraction = () => {
-  // Try immediate extraction first
   if (quickExtract()) return;
 
-  // 🚀 Check for common error states with more specific detection
   const errorIndicators = [
     ".access-denied",
     '[class*="error"]',
@@ -157,7 +138,6 @@ const attemptExtraction = () => {
     }
   }
 
-  // Check for access denied in page text
   if (document.body.innerText.toLowerCase().includes("access denied")) {
     const errorMsg =
       "Access denied - you may not have permission to view this page";
@@ -170,7 +150,6 @@ const attemptExtraction = () => {
     return;
   }
 
-  // 🚀 If page still loading, wait and retry with shorter timeout
   if (document.readyState !== "complete") {
     setTimeout(() => {
       if (window.location.pathname.includes("/submission/")) {
@@ -192,9 +171,8 @@ const attemptExtraction = () => {
           );
         }
       }
-    }, 150); // 🚀 Reduced to 150ms for faster response
+    }, 150);
   } else {
-    // Page is loaded but content not found
     if (window.location.pathname.includes("/submission/")) {
       sendResult("SUBMISSION_CODE", null, "Code element not found on page");
     } else if (window.location.pathname.includes("/problem/")) {
@@ -207,7 +185,6 @@ const attemptExtraction = () => {
   }
 };
 
-// 🚀 IMPROVEMENT: Enhanced message listener with better error handling
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     if (request.action === "extractSubmissionCode") {
@@ -252,15 +229,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return false;
 });
 
-// 🚀 IMPROVEMENT: Optimized initialization with immediate sync triggering
 const initialize = () => {
-  // Only run on relevant pages
   const isSubmissionPage = window.location.pathname.includes("/submission/");
   const isProblemPage = window.location.pathname.includes("/problem/");
   const isMySubmissions = window.location.pathname.includes("/submissions/");
 
   if (!isSubmissionPage && !isProblemPage && !isMySubmissions) {
-    return; // Skip execution on irrelevant pages
+    return;
   }
 
   console.log("🚀 CFPusher content script initialized", {
@@ -271,37 +246,31 @@ const initialize = () => {
     readyState: document.readyState,
   });
 
-  // 🚀 NEW: Trigger immediate sync when user visits submission-related pages
   if (isSubmissionPage || isMySubmissions) {
     console.log("⚡ Triggering immediate sync due to submission page visit");
-    chrome.runtime.sendMessage({ action: "triggerImmediateSync" }).catch(() => {
-      // Ignore errors if background script isn't ready
-    });
+    chrome.runtime
+      .sendMessage({ action: "triggerImmediateSync" })
+      .catch(() => {});
   }
 
-  // Attempt extraction
   attemptExtraction();
 };
 
-// 🚀 IMPROVEMENT: Better initialization timing
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initialize);
 } else {
-  // Document already loaded
   initialize();
 }
 
-// 🚀 IMPROVEMENT: Handle dynamic content changes (for SPAs)
 let lastUrl = window.location.href;
 const observer = new MutationObserver(() => {
   if (window.location.href !== lastUrl) {
     lastUrl = window.location.href;
     console.log("🔄 URL changed, re-initializing...");
-    setTimeout(initialize, 100); // Small delay for content to load
+    setTimeout(initialize, 100);
   }
 });
 
-// Only observe if we're on a Codeforces page
 if (window.location.hostname.includes("codeforces.com")) {
   observer.observe(document.body, {
     childList: true,
@@ -309,7 +278,6 @@ if (window.location.hostname.includes("codeforces.com")) {
   });
 }
 
-// Cleanup observer when page unloads
 window.addEventListener("beforeunload", () => {
   observer.disconnect();
 });

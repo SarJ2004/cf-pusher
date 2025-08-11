@@ -25,34 +25,6 @@ const createHiddenTab = (url) => {
   });
 };
 
-const createHiddenWindow = (url) => {
-  return new Promise((resolve, reject) => {
-    chrome.windows.create(
-      {
-        url: url,
-        type: "popup",
-        width: 1,
-        height: 1,
-        left: -1000,
-        top: -1000,
-        focused: false,
-      },
-      (window) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-
-        if (window && window.tabs && window.tabs[0]) {
-          resolve({ tabId: window.tabs[0].id, windowId: window.id });
-        } else {
-          reject(new Error("Failed to create window"));
-        }
-      }
-    );
-  });
-};
-
 export const getSubmissionCode = (contestId, submissionId) => {
   return new Promise((resolve, reject) => {
     const url = `https://codeforces.com/contest/${contestId}/submission/${submissionId}`;
@@ -60,18 +32,10 @@ export const getSubmissionCode = (contestId, submissionId) => {
 
     const performExtraction = async () => {
       try {
-        // Try hidden window first, fallback to tab if it fails
-        try {
-          const result = await createHiddenWindow(url);
-          tabId = result.tabId;
-          windowId = result.windowId;
-        } catch (windowError) {
-          console.log("Hidden window failed, falling back to tab approach");
-          console.log("Window error:", windowError.message);
-          const result = await createHiddenTab(url);
-          tabId = result.tabId;
-          windowId = result.windowId;
-        }
+        // Use hidden tab approach for completely invisible operation
+        const result = await createHiddenTab(url);
+        tabId = result.tabId;
+        windowId = result.windowId;
 
         let timeoutId;
 
@@ -130,20 +94,10 @@ export const getProblemStatement = (contestId, index) => {
 
     const performExtraction = async () => {
       try {
-        // Try hidden window first, fallback to tab if it fails
-        try {
-          const result = await createHiddenWindow(url);
-          tabId = result.tabId;
-          windowId = result.windowId;
-        } catch (windowError) {
-          console.log(
-            "Hidden window failed for problem statement, falling back to tab"
-          );
-          console.log("Window error:", windowError.message);
-          const result = await createHiddenTab(url);
-          tabId = result.tabId;
-          windowId = result.windowId;
-        }
+        // Use hidden tab approach for completely invisible operation
+        const result = await createHiddenTab(url);
+        tabId = result.tabId;
+        windowId = result.windowId;
 
         let timeoutId;
 

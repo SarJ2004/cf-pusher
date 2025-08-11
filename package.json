@@ -1,5 +1,9 @@
 {
-  "name": "cf-github-autosync",
+  "name": "cf-pusher",
+  "author": {
+    "name": "Sarthak Jha",
+    "email": "sargedevx@gmail.com"
+  },
   "private": true,
   "version": "1.1",
   "type": "module",
@@ -7,7 +11,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "zip": "powershell -Command \"Compress-Archive -Path './dist/*' -DestinationPath './cf-pusher-extension.zip' -Force\""
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.13.3",
