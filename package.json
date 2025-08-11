@@ -2,7 +2,11 @@
   "name": "cf-pusher",
   "author": {
     "name": "Sarthak Jha",
-    "email": "sargedevx@gmail.com"
+    "email": "sargedevx@gmail.com",
+    "url": "https://github.com/SarJ2004"
+  },
+  "repository": {
+    "url": "https://github.com/SarJ2004/cf-pusher"
   },
   "private": true,
   "version": "1.1",
