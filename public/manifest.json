@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CFPusher - Codeforces to GitHub",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Automatically pushes accepted Codeforces submissions to your GitHub repository.",
   "action": {
     "default_popup": "index.html"
@@ -23,5 +23,8 @@
     "type": "module"
   },
   "permissions": ["identity", "storage", "alarms"],
-  "host_permissions": ["https://codeforces.com/*"]
+  "host_permissions": [
+    "https://codeforces.com/*",
+    "https://cfpusher-backend.onrender.com/*"
+  ]
 }

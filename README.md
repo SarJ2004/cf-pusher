@@ -11,7 +11,7 @@
 <h1 align="center"><a href="https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael">CFPusher-Codeforces to GitHub<a/></h1>
 
   <p align="center">
-    A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository
+      A powerful and user-friendly Chrome extension that pushes your accepted Codeforces submissions to your GitHub repository
     <br />
     <a href="https://github.com/SarJ2004/cf-pusher/issues/new?template=bug_report.md">Report Bug</a>
     &middot;
@@ -45,7 +45,7 @@
 
 ## Description
 
-A powerful and user-friendly Chrome extension that pushes your most recent Codeforces submission to your GitHub Repository. It leverages modern web technologies and is built using [Vite](https://vitejs.dev/) for fast development builds and optimized production output.
+A powerful and user-friendly Chrome extension that pushes your accepted Codeforces submissions to your GitHub repository. It supports fast auto-sync for the latest accepted solution and optional backfill for older accepted problems. The project is built with [Vite](https://vitejs.dev/) for fast development builds and optimized production output.
 
 ### Screenshots
 ![Popup View](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/1_h1bvei.png)
@@ -77,9 +77,11 @@ A powerful and user-friendly Chrome extension that pushes your most recent Codef
 
 ## Features
 
-- **Auto Push Accepted Submissions:** Automatically pushes your accepted Codeforces submissions to a selected GitHub repository without any manual work.
+- **Auto Push Accepted Submissions:** Automatically pushes your latest accepted Codeforces submission to a selected GitHub repository.
+- **Optional Past Submission Backfill:** Enable past sync to backfill older accepted problems (latest accepted submission per problem).
 - **Streak Tracker** Tracks your Codeforces streak for the current week and displays it visually inside the popup.
 - **Problem Rating Chart** It has a problem rating chart and a mini info section, which tells one about the profile information, as well as the number of different problems solved in each rating range.
+- **Codeforces OAuth Login** Sign in to Codeforces via OAuth from inside the extension.
 - **GitHub OAuth Integration** Secured with GitHub's OAuth to authorize and manage repositories.
 - **Repo Selection & Creation** The user can choose to select any repo of their choice to push their codes, or additionaly, create a seperate repo.
 - **Dark Mode Integration** Yayyy you can now toggle between dark and light modes!!
@@ -95,7 +97,7 @@ OR,
 
 You can download the latest release of the extension directly from GitHub, and proceed with the manual installation as instructed below:
 
-[Download Latest Release](https://github.com/SarJ2004/cf-pusher/releases/download/v1.0.7/extension.zip)
+[Download Latest Release](https://github.com/SarJ2004/cf-pusher/releases/latest)
 
 ### Manual Installation in Chrome
 
@@ -120,13 +122,16 @@ You can download the latest release of the extension directly from GitHub, and p
 
 Once installed, click on the extension icon in your Chrome toolbar or follow the in-page instructions provided by the extension.
 1. **Connect to Codeforces:**  
-   When the popup is opened, Connect the extension to GitHub by entering your Codeforces handle, the ApiKey, and the ApiSecret(which you can generate here: [Generate API Key and Secret](https://codeforces.com/settings/api)). Click on "Add an API Key", and then copy the details to the respective input boxes in the popup.
+   Open the popup and sign in with Codeforces OAuth. You only need the OAuth client ID (the field is prefilled by default in the extension), then complete the login flow in the browser popup.
 
 2. **Connect to GitHub:**  
-   Click on the settings icon at the top right of the popup, and give access of your GitHub account to the extension.
+   Click on the settings icon at the top right of the popup, and authorize your GitHub account.
 
 3. **Connect your preferred repo:**  
-   After connecting to github, you can now choose the repo to which your codes are to be pushed. You can either link a pre-existing repo, or, can create and link to a new one.
+   After connecting to GitHub, choose the repository where your solutions should be pushed. You can either link an existing repo or create a new one directly from settings.
+
+4. **(Optional) Enable past submission sync:**  
+   In settings, toggle **Push Past Submissions** if you want CFPusher to backfill previously solved accepted problems.
 
 You are all set now!!
 
@@ -134,11 +139,11 @@ You are all set now!!
 1. **Unable to submit codes during contests**  
    The api has no access to the codes submitted during the contests, so, after the contest is over(checking phase is over), you can resubmit them to push.
 
-2. **More of a Disadvantage**  
-   The background script checks for new submissions every 30 seconds, but including the time to push, it takes almost a minute for the code to be available in one's repo. So, within that interval of a minute or so, if the user submits many different codes, only the most recent code gets pushed to the repo(sorry, will improve it in future, or you guys can too!).
+2. **Rapid consecutive submissions**  
+   CFPusher syncs frequently, but if many accepted submissions arrive in a very short time window, GitHub/API rate limits and extraction timing can still delay some pushes. Use manual sync or enable past submission sync to recover older accepted problems.
    
-3. **Problem Statement not formatted properly in README**
-   I was unsuccessful to parse the problem statement properly in the README file. For the MathJax/latex elements, you will see them repeated, and a undefined term next to it. I promise to fix the parser later on.  
+3. **Problem statement formatting edge cases**
+   Most statements are parsed correctly, but some MathJax/LaTeX-heavy problems may still have imperfect formatting in generated README files.  
    
 ---
 
@@ -179,6 +184,12 @@ npm run build
 
 This command will compile your project and output the production files into the `dist/` folder. These files are ready to be zipped and installed as described above.
 
+To create a ZIP archive from `dist/` for distribution, run:
+
+```bash
+npm run zip
+```
+
 ### Continuous Integration & Releases
 
 This project uses GitHub Actions to automate the build and release process:
@@ -200,7 +211,7 @@ This project uses GitHub Actions to automate the build and release process:
   ```
 
 - **Releases Section:**  
-  Once the workflow completes, navigate to the [Releases](https://github.com/yourusername/yourrepo/releases/latest) section of your repository to download the zipped extension.
+   Once the workflow completes, navigate to [Releases](https://github.com/SarJ2004/cf-pusher/releases/latest) to download the zipped extension.
 
 ---
 

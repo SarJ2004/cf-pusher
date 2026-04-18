@@ -35,8 +35,15 @@ const StreakTracker = ({ solvedDays = [] }) => {
   const dayNames = getDayNames();
 
   const getStreakCount = () => {
+    if (solvedDays.length === 0) return 0;
+
+    const todayIndex = solvedDays.length - 1;
+    const startIndex = solvedDays[todayIndex] ? todayIndex : todayIndex - 1;
+
+    if (startIndex < 0 || !solvedDays[startIndex]) return 0;
+
     let count = 0;
-    for (let i = solvedDays.length - 1; i >= 0; i--) {
+    for (let i = startIndex; i >= 0; i--) {
       if (solvedDays[i]) {
         count++;
       } else {

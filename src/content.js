@@ -1,8 +1,22 @@
+/* eslint-disable no-undef */
+
+const PAGE_KIND = {
+  submission: "submission",
+  problem: "problem",
+  submissions: "submissions",
+  unknown: "unknown",
+};
+
+const CODE_NOT_FOUND_ERROR = "Code element not found on page";
+const PROBLEM_NOT_FOUND_ERROR = "Problem statement not found on page";
+const ACCESS_DENIED_ERROR =
+  "Access denied - you may not have permission to view this page";
+
 const sendResult = (type, data, error = null) => {
   try {
     const message = {
-      type: type,
-      error: error,
+      type,
+      error,
       url: window.location.href,
       timestamp: Date.now(),
     };
@@ -16,9 +30,57 @@ const sendResult = (type, data, error = null) => {
     }
 
     chrome.runtime.sendMessage(message);
-  } catch (err) {
-    console.warn(`Failed to send ${type} result:`, err);
+  } catch (error) {
+    console.warn(`Failed to send ${type} result:`, error);
   }
+};
+
+const getPageKind = () => {
+  const { pathname } = window.location;
+
+  if (pathname.includes("/submission/")) {
+    return PAGE_KIND.submission;
+  }
+
+  if (pathname.includes("/problem/")) {
+    return PAGE_KIND.problem;
+  }
+
+  if (pathname.includes("/submissions/")) {
+    return PAGE_KIND.submissions;
+  }
+
+  return PAGE_KIND.unknown;
+};
+
+const readCodeText = (element) => {
+  if (!element) {
+    return null;
+  }
+
+  const preferred =
+    typeof element.innerText === "string" ? element.innerText : null;
+  const fallback =
+    typeof element.textContent === "string" ? element.textContent : null;
+  const raw = (preferred ?? fallback ?? "").replace(/\r\n/g, "\n");
+
+  return raw.trim() ? raw : null;
+};
+
+const findBySelectors = (selectors, extractor) => {
+  for (const selector of selectors) {
+    try {
+      const element = document.querySelector(selector);
+      const data = extractor(element);
+      if (data) {
+        return data;
+      }
+    } catch (error) {
+      console.warn(`Selector failed: ${selector}`, error);
+    }
+  }
+
+  return null;
 };
 
 const extractSubmissionCode = () => {
@@ -27,31 +89,26 @@ const extractSubmissionCode = () => {
     "pre.prettyprint",
     ".source pre",
     "#program-source-text",
-    'pre:contains("main")',
   ];
 
-  for (const selector of selectors) {
-    try {
-      const element = document.querySelector(selector);
-      if (element && element.textContent.trim()) {
-        console.log(`✅ Found code using selector: ${selector}`);
-        return element.textContent.trim();
-      }
-    } catch (err) {
-      console.warn(`Selector failed: ${selector}`, err);
-    }
+  const fromSelectors = findBySelectors(selectors, readCodeText);
+  if (fromSelectors) {
+    return fromSelectors;
   }
 
-  const allPre = document.querySelectorAll("pre");
-  for (const pre of allPre) {
-    const content = pre.textContent.trim();
+  const allPreElements = document.querySelectorAll("pre");
+  for (const element of allPreElements) {
+    const content = readCodeText(element);
+    if (!content) {
+      continue;
+    }
+
     if (
       content.length > 50 &&
       (content.includes("int") ||
         content.includes("def") ||
         content.includes("class"))
     ) {
-      console.log("✅ Found code using fallback pre search");
       return content;
     }
   }
@@ -69,33 +126,57 @@ const extractProblemStatement = () => {
     'div[class*="problem"]',
   ];
 
-  for (const selector of selectors) {
-    try {
-      const element = document.querySelector(selector);
-      if (element && element.innerHTML.trim()) {
-        console.log(`✅ Found problem statement using selector: ${selector}`);
-        return element.innerHTML.trim();
-      }
-    } catch (err) {
-      console.warn(`Problem selector failed: ${selector}`, err);
+  const fromSelectors = findBySelectors(selectors, (element) => {
+    if (!element || !element.innerHTML.trim()) {
+      return null;
     }
+
+    return element.innerHTML.trim();
+  });
+
+  if (fromSelectors) {
+    return fromSelectors;
   }
 
-  try {
-    const mainContent = document.querySelector(".main-content, .content, main");
-    if (mainContent && mainContent.innerHTML.trim()) {
-      console.log("✅ Found problem statement using fallback main content");
-      return mainContent.innerHTML.trim();
-    }
-  } catch (err) {
-    console.warn("Main content fallback failed:", err);
+  const fallback = document.querySelector(".main-content, .content, main");
+  if (fallback?.innerHTML?.trim()) {
+    return fallback.innerHTML.trim();
   }
 
   return null;
 };
 
-const quickExtract = () => {
-  if (window.location.pathname.includes("/submission/")) {
+const sendExtractionError = (pageKind, errorMessage) => {
+  if (pageKind === PAGE_KIND.submission) {
+    sendResult("SUBMISSION_CODE", null, errorMessage);
+  }
+
+  if (pageKind === PAGE_KIND.problem) {
+    sendResult("PROBLEM_STATEMENT", null, errorMessage);
+  }
+};
+
+const hasAccessDenied = () => {
+  const indicators = [
+    ".access-denied",
+    '[class*="error"]',
+    '[class*="forbidden"]',
+    '[class*="denied"]',
+  ];
+
+  for (const selector of indicators) {
+    if (document.querySelector(selector)) {
+      return true;
+    }
+  }
+
+  return document.body.innerText.toLowerCase().includes("access denied");
+};
+
+const tryExtraction = () => {
+  const pageKind = getPageKind();
+
+  if (pageKind === PAGE_KIND.submission) {
     const code = extractSubmissionCode();
     if (code) {
       sendResult("SUBMISSION_CODE", code);
@@ -103,10 +184,10 @@ const quickExtract = () => {
     }
   }
 
-  if (window.location.pathname.includes("/problem/")) {
-    const problemHTML = extractProblemStatement();
-    if (problemHTML) {
-      sendResult("PROBLEM_STATEMENT", problemHTML);
+  if (pageKind === PAGE_KIND.problem) {
+    const html = extractProblemStatement();
+    if (html) {
+      sendResult("PROBLEM_STATEMENT", html);
       return true;
     }
   }
@@ -115,144 +196,104 @@ const quickExtract = () => {
 };
 
 const attemptExtraction = () => {
-  if (quickExtract()) return;
-
-  const errorIndicators = [
-    ".access-denied",
-    '[class*="error"]',
-    '[class*="forbidden"]',
-    '[class*="denied"]',
-  ];
-
-  for (const indicator of errorIndicators) {
-    if (document.querySelector(indicator)) {
-      const errorMsg =
-        "Access denied - you may not have permission to view this page";
-
-      if (window.location.pathname.includes("/submission/")) {
-        sendResult("SUBMISSION_CODE", null, errorMsg);
-      } else if (window.location.pathname.includes("/problem/")) {
-        sendResult("PROBLEM_STATEMENT", null, errorMsg);
-      }
-      return;
-    }
-  }
-
-  if (document.body.innerText.toLowerCase().includes("access denied")) {
-    const errorMsg =
-      "Access denied - you may not have permission to view this page";
-
-    if (window.location.pathname.includes("/submission/")) {
-      sendResult("SUBMISSION_CODE", null, errorMsg);
-    } else if (window.location.pathname.includes("/problem/")) {
-      sendResult("PROBLEM_STATEMENT", null, errorMsg);
-    }
+  const pageKind = getPageKind();
+  if (pageKind === PAGE_KIND.unknown || pageKind === PAGE_KIND.submissions) {
     return;
   }
 
-  if (document.readyState !== "complete") {
-    setTimeout(() => {
-      if (window.location.pathname.includes("/submission/")) {
-        const code = extractSubmissionCode();
-        if (code) {
-          sendResult("SUBMISSION_CODE", code);
-        } else {
-          sendResult("SUBMISSION_CODE", null, "Code element not found on page");
-        }
-      } else if (window.location.pathname.includes("/problem/")) {
-        const problemHTML = extractProblemStatement();
-        if (problemHTML) {
-          sendResult("PROBLEM_STATEMENT", problemHTML);
-        } else {
-          sendResult(
-            "PROBLEM_STATEMENT",
-            null,
-            "Problem statement not found on page"
-          );
-        }
-      }
-    }, 150);
-  } else {
-    if (window.location.pathname.includes("/submission/")) {
-      sendResult("SUBMISSION_CODE", null, "Code element not found on page");
-    } else if (window.location.pathname.includes("/problem/")) {
-      sendResult(
-        "PROBLEM_STATEMENT",
-        null,
-        "Problem statement not found on page"
-      );
-    }
+  if (tryExtraction()) {
+    return;
   }
+
+  if (hasAccessDenied()) {
+    sendExtractionError(pageKind, ACCESS_DENIED_ERROR);
+    return;
+  }
+
+  const retry = () => {
+    if (tryExtraction()) {
+      return;
+    }
+
+    sendExtractionError(
+      pageKind,
+      pageKind === PAGE_KIND.submission
+        ? CODE_NOT_FOUND_ERROR
+        : PROBLEM_NOT_FOUND_ERROR,
+    );
+  };
+
+  if (document.readyState !== "complete") {
+    setTimeout(retry, 150);
+    return;
+  }
+
+  retry();
+};
+
+const respondWithExtraction = (action) => {
+  if (action === "extractSubmissionCode") {
+    const code = extractSubmissionCode();
+    return {
+      success: Boolean(code),
+      data: code,
+      error: code ? null : "Code not found",
+      url: window.location.href,
+    };
+  }
+
+  if (action === "extractProblemStatement") {
+    const html = extractProblemStatement();
+    return {
+      success: Boolean(html),
+      data: html,
+      error: html ? null : "Problem statement not found",
+      url: window.location.href,
+    };
+  }
+
+  return null;
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
-    if (request.action === "extractSubmissionCode") {
-      console.log("📨 Received request to extract submission code");
-
-      const code = extractSubmissionCode();
-      const response = {
-        success: !!code,
-        data: code,
-        error: code ? null : "Code not found",
-        url: window.location.href,
-      };
-
-      sendResponse(response);
-      return true;
+    const response = respondWithExtraction(request.action);
+    if (!response) {
+      return false;
     }
 
-    if (request.action === "extractProblemStatement") {
-      console.log("📨 Received request to extract problem statement");
-
-      const problemHTML = extractProblemStatement();
-      const response = {
-        success: !!problemHTML,
-        data: problemHTML,
-        error: problemHTML ? null : "Problem statement not found",
-        url: window.location.href,
-      };
-
-      sendResponse(response);
-      return true;
-    }
+    sendResponse(response);
+    return true;
   } catch (error) {
-    console.error("❌ Error in message listener:", error);
+    console.error("Error in message listener:", error);
     sendResponse({
       success: false,
       data: null,
       error: error.message,
       url: window.location.href,
     });
+    return true;
   }
-
-  return false;
 });
 
-const initialize = () => {
-  const isSubmissionPage = window.location.pathname.includes("/submission/");
-  const isProblemPage = window.location.pathname.includes("/problem/");
-  const isMySubmissions = window.location.pathname.includes("/submissions/");
-
-  if (!isSubmissionPage && !isProblemPage && !isMySubmissions) {
+const maybeTriggerImmediateSync = () => {
+  const pageKind = getPageKind();
+  if (pageKind !== PAGE_KIND.submission && pageKind !== PAGE_KIND.submissions) {
     return;
   }
 
-  console.log("🚀 CFPusher content script initialized", {
-    url: window.location.href,
-    isSubmissionPage,
-    isProblemPage,
-    isMySubmissions,
-    readyState: document.readyState,
-  });
+  chrome.runtime
+    .sendMessage({ action: "triggerImmediateSync" })
+    .catch(() => {});
+};
 
-  if (isSubmissionPage || isMySubmissions) {
-    console.log("⚡ Triggering immediate sync due to submission page visit");
-    chrome.runtime
-      .sendMessage({ action: "triggerImmediateSync" })
-      .catch(() => {});
+const initialize = () => {
+  const pageKind = getPageKind();
+  if (pageKind === PAGE_KIND.unknown) {
+    return;
   }
 
+  maybeTriggerImmediateSync();
   attemptExtraction();
 };
 
@@ -262,16 +303,17 @@ if (document.readyState === "loading") {
   initialize();
 }
 
-let lastUrl = window.location.href;
+let previousUrl = window.location.href;
 const observer = new MutationObserver(() => {
-  if (window.location.href !== lastUrl) {
-    lastUrl = window.location.href;
-    console.log("🔄 URL changed, re-initializing...");
-    setTimeout(initialize, 100);
+  if (window.location.href === previousUrl) {
+    return;
   }
+
+  previousUrl = window.location.href;
+  setTimeout(initialize, 100);
 });
 
-if (window.location.hostname.includes("codeforces.com")) {
+if (window.location.hostname.includes("codeforces.com") && document.body) {
   observer.observe(document.body, {
     childList: true,
     subtree: true,

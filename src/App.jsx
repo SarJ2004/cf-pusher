@@ -1,11 +1,7 @@
-import "./App.css";
-import Popup from "./pages/Popup";
+import Popup from "./popup/Popup";
+
 function App() {
-  return (
-    <>
-      <Popup />
-    </>
-  );
+  return <Popup />;
 }
 
 export default App;

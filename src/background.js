@@ -1,18 +1,20 @@
 /* eslint-disable no-undef */
-import { fetchAcceptedSubmissions } from "./handlers/codeforcesHandler";
+import { fetchAcceptedSubmissions } from "./services/codeforcesService";
 import {
   getSubmissionCode,
   getProblemStatement,
-} from "./handlers/getSubmissionCode";
-import { pushToGitHubWithRetry } from "./handlers/githubHandler";
+} from "./services/submissionExtractionService";
+import { pushToGitHubWithRetry } from "./services/githubService";
 
 let isSyncing = false;
+let isBackfilling = false;
 let lastSyncTime = 0;
 let lastSubmissionId = null;
 
 // 🚀 PERFORMANCE IMPROVEMENT: Ultra-fast sync for instant response
 const SYNC_INTERVAL_MINUTES = 0.1; // 6 seconds for ultra-fast response
 const MIN_SYNC_INTERVAL_MS = 2000; // Minimum 2 seconds between syncs for maximum responsiveness
+const HISTORY_SYNC_BATCH_SIZE = 15;
 
 const langMapping = {
   "C++": "cpp",
@@ -31,6 +33,20 @@ const getExtensionFromLanguage = (language) => {
     }
   }
   return "txt";
+};
+
+const normalizeCodeForGitHub = (rawCode) => {
+  if (typeof rawCode !== "string") return "";
+
+  let normalized = rawCode.replace(/\r\n/g, "\n");
+
+  // Some extractors return escaped sequences instead of actual control chars.
+  normalized = normalized
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t");
+
+  return normalized;
 };
 
 // 🚀 IMPROVEMENT: Add rate limiting protection
@@ -128,7 +144,7 @@ const simpleCleanHTML = (html) => {
     // Handle MathJax more efficiently
     cleaned = cleaned.replace(
       /<script[^>]*type=["']math\/tex[^"']*["'][^>]*>(.*?)<\/script>/g,
-      (match, mathContent) => `$${mathContent.trim()}$`
+      (match, mathContent) => `$${mathContent.trim()}$`,
     );
 
     // Remove scripts and clean HTML
@@ -156,13 +172,235 @@ const simpleCleanHTML = (html) => {
   }
 };
 
+const getBackfillCompletionKey = (username, linkedRepo) => {
+  const safeUser = (username || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeRepo = (linkedRepo || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+  return `cf-history-sync-complete-${safeUser}-${safeRepo}`;
+};
+
+const pickLatestSubmissionPerProblem = (accepted) => {
+  const latestByProblem = new Map();
+
+  for (const submission of accepted) {
+    const problemKey = `${submission.contestId}-${submission.index}`;
+    if (!latestByProblem.has(problemKey)) {
+      latestByProblem.set(problemKey, submission);
+    }
+  }
+
+  // Process oldest first for more natural commit history.
+  return Array.from(latestByProblem.values()).reverse();
+};
+
+const syncSingleAcceptedSubmission = async ({
+  submission,
+  githubToken,
+  linkedRepo,
+  syncedProblems,
+  cacheKey,
+}) => {
+  const {
+    contestId,
+    id: submissionId,
+    index,
+    problemName,
+    programmingLanguage,
+  } = submission;
+
+  const folderName = `${contestId}/${index} - ${problemName}`;
+  const extension = getExtensionFromLanguage(programmingLanguage);
+  const filePath = `${folderName}/solution.${extension}`;
+  const readmePath = `${folderName}/README.md`;
+  const problemCacheKey = `cf-problem-${contestId}-${index}`;
+
+  if (syncedProblems[submissionId]) {
+    console.log(`🟡 Already synced ${folderName}, skipping...`);
+    lastSubmissionId = submissionId;
+    return true;
+  }
+
+  console.log(`⚡ Syncing ${folderName}...`);
+
+  const [codeResult, problemResult] = await Promise.allSettled([
+    getSubmissionCode(contestId, submissionId),
+    getProblemStatementCached(contestId, index, problemCacheKey),
+  ]);
+
+  if (codeResult.status === "rejected" || !codeResult.value) {
+    const errorMsg = codeResult.reason?.message || "Unknown error";
+    console.error(
+      `❌ Failed to get submission code for ${folderName}:`,
+      errorMsg,
+    );
+    return false;
+  }
+
+  const code = codeResult.value;
+  const problemHTML =
+    problemResult.status === "fulfilled" ? problemResult.value : null;
+
+  if (problemResult.status === "rejected") {
+    const errorMsg = problemResult.reason?.message || "Unknown error";
+    console.warn(
+      `⚠️ Could not retrieve problem statement for ${folderName}:`,
+      errorMsg,
+    );
+  }
+
+  const problemUrl = `https://codeforces.com/contest/${contestId}/problem/${index}`;
+  const cleanedHTML = problemHTML ? simpleCleanHTML(problemHTML) : null;
+  const readmeContent = cleanedHTML
+    ? `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\n${cleanedHTML}`
+    : `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\nProblem statement could not be retrieved. Please visit the link above.`;
+
+  const commitMessage = `Add ${problemName} [${index}] from Codeforces`;
+
+  if (!rateLimitTracker.canMakeRequest("github")) {
+    console.warn("⏳ Rate limit reached for GitHub API, skipping push");
+    return false;
+  }
+
+  rateLimitTracker.recordRequest("github");
+  const readmePushSuccess = await pushToGitHubWithRetry({
+    repoFullName: linkedRepo,
+    githubToken,
+    filePath: readmePath,
+    commitMessage: `${commitMessage} (Problem Statement)`,
+    content: readmeContent,
+  });
+
+  if (!readmePushSuccess) {
+    console.error(`❌ README push failed for ${folderName}`);
+    return false;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  rateLimitTracker.recordRequest("github");
+  const normalizedCode = normalizeCodeForGitHub(code);
+  const codePushSuccess = await pushToGitHubWithRetry({
+    repoFullName: linkedRepo,
+    githubToken,
+    filePath,
+    commitMessage,
+    content: normalizedCode,
+  });
+
+  if (!codePushSuccess) {
+    console.error(`❌ Code push failed for ${folderName}`);
+    return false;
+  }
+
+  syncedProblems[submissionId] = true;
+  lastSubmissionId = submissionId;
+  await chrome.storage.sync.set({ [cacheKey]: syncedProblems });
+  console.log(`✅ Successfully synced ${folderName}`);
+  return true;
+};
+
+const syncHistoricalAcceptedSubmissions = async (
+  githubToken,
+  linkedRepo,
+  username,
+  isHistoricalSyncEnabled = false,
+) => {
+  if (!isHistoricalSyncEnabled) {
+    return;
+  }
+
+  if (!githubToken || !linkedRepo || !username || isBackfilling) return;
+
+  const completionKey = getBackfillCompletionKey(username, linkedRepo);
+  const completionResult = await chrome.storage.sync.get([completionKey]);
+
+  if (completionResult[completionKey]) {
+    return;
+  }
+
+  if (!rateLimitTracker.canMakeRequest("codeforces")) {
+    console.warn(
+      "⏳ Rate limit reached for Codeforces API, skipping history sync",
+    );
+    return;
+  }
+
+  isBackfilling = true;
+  console.log("🕰️ Starting historical submissions sync...");
+
+  try {
+    rateLimitTracker.recordRequest("codeforces");
+    const accepted = await fetchAcceptedSubmissions(username, 10000);
+
+    if (accepted.length === 0) {
+      await chrome.storage.sync.set({ [completionKey]: true });
+      console.log("✅ No historical submissions found");
+      return;
+    }
+
+    const uniqueByProblem = pickLatestSubmissionPerProblem(accepted);
+    const cacheKey = `cf-synced-problems`;
+    const result = await chrome.storage.sync.get([cacheKey]);
+    const syncedProblems = result[cacheKey] || {};
+
+    const pending = uniqueByProblem.filter(
+      (submission) => !syncedProblems[submission.id],
+    );
+
+    if (pending.length === 0) {
+      await chrome.storage.sync.set({ [completionKey]: true });
+      console.log("✅ Historical submissions already synced");
+      return;
+    }
+
+    const batch = pending.slice(0, HISTORY_SYNC_BATCH_SIZE);
+    let syncedCount = 0;
+
+    for (const submission of batch) {
+      const { syncPastSubmissions } = await chrome.storage.sync.get(
+        "syncPastSubmissions",
+      );
+      if (!syncPastSubmissions) {
+        console.log("⏹️ Historical submissions sync disabled, stopping batch");
+        return;
+      }
+
+      const success = await syncSingleAcceptedSubmission({
+        submission,
+        githubToken,
+        linkedRepo,
+        syncedProblems,
+        cacheKey,
+      });
+
+      if (success) {
+        syncedCount += 1;
+      }
+    }
+
+    const remaining = pending.length - batch.length;
+    console.log(
+      `🧩 Historical sync batch done: ${syncedCount}/${batch.length} synced, ${remaining} remaining`,
+    );
+
+    if (remaining <= 0) {
+      await chrome.storage.sync.set({ [completionKey]: true });
+      console.log("✅ Historical submissions sync completed");
+    }
+  } catch (error) {
+    console.error("❌ Historical submissions sync failed:", error);
+  } finally {
+    isBackfilling = false;
+  }
+};
+
 // 🚀 IMPROVEMENT: Optimized sync function with better error handling and performance
 const syncLatestAcceptedSubmission = async (
   githubToken,
   linkedRepo,
-  username
+  username,
 ) => {
-  if (!githubToken || !linkedRepo || !username || isSyncing) return;
+  if (!githubToken || !linkedRepo || !username || isSyncing || isBackfilling)
+    return;
 
   // 🚀 Rate limiting check
   if (!rateLimitTracker.canMakeRequest("codeforces")) {
@@ -201,13 +439,7 @@ const syncLatestAcceptedSubmission = async (
     }
 
     const latest = accepted[0];
-    const {
-      contestId,
-      id: submissionId,
-      index,
-      problemName,
-      programmingLanguage,
-    } = latest;
+    const { id: submissionId } = latest;
 
     // 🚀 Quick check if this submission was already processed
     if (lastSubmissionId === submissionId) {
@@ -215,145 +447,27 @@ const syncLatestAcceptedSubmission = async (
       return;
     }
 
-    const folderName = `${contestId}/${index} - ${problemName}`;
-    const extension = getExtensionFromLanguage(programmingLanguage);
-    const filePath = `${folderName}/solution.${extension}`;
-    const readmePath = `${folderName}/README.md`;
-
     const cacheKey = `cf-synced-problems`;
-    const problemCacheKey = `cf-problem-${contestId}-${index}`;
 
     const result = await chrome.storage.sync.get([cacheKey]);
     let syncedProblems = result[cacheKey] || {};
     if (syncedProblems[submissionId]) {
-      console.log(`🟡 Already synced ${folderName}, skipping...`);
+      console.log("🟡 Latest accepted submission already synced, skipping...");
       lastSubmissionId = submissionId;
       return;
     }
 
-    console.log("⚡ Starting parallel fetch operations...");
+    const success = await syncSingleAcceptedSubmission({
+      submission: latest,
+      githubToken,
+      linkedRepo,
+      syncedProblems,
+      cacheKey,
+    });
 
-    // 🚀 OPTIMIZATION: Run code and problem fetching in parallel
-    const [codeResult, problemResult] = await Promise.allSettled([
-      getSubmissionCode(contestId, submissionId),
-      getProblemStatementCached(contestId, index, problemCacheKey),
-    ]);
-
-    // Handle code result
-    if (codeResult.status === "rejected" || !codeResult.value) {
-      const errorMsg = codeResult.reason?.message || "Unknown error";
-      console.error("❌ Failed to get submission code:", errorMsg);
-
-      // Check if it's an access issue
-      if (
-        errorMsg.includes("access denied") ||
-        errorMsg.includes("permission")
-      ) {
-        console.log("🔒 Submission may be private or restricted");
-      } else if (errorMsg.includes("Timeout")) {
-        console.log("⏱️ Request timed out - page may be slow or inaccessible");
-      }
-      return;
-    }
-    const code = codeResult.value;
-
-    // Handle problem result (non-blocking)
-    let problemHTML = null;
-    if (problemResult.status === "fulfilled" && problemResult.value) {
-      problemHTML = problemResult.value;
-    } else {
-      const errorMsg = problemResult.reason?.message || "Unknown error";
-      console.warn("⚠️ Could not retrieve problem statement:", errorMsg);
-
-      // Check if it's an access issue
-      if (
-        errorMsg.includes("access denied") ||
-        errorMsg.includes("permission")
-      ) {
-        console.log("🔒 Problem may be from a private contest or restricted");
-      } else if (errorMsg.includes("Timeout")) {
-        console.log("⏱️ Problem statement request timed out");
-      }
-    }
-
-    console.log("⚡ Processing content...");
-    const problemUrl = `https://codeforces.com/contest/${contestId}/problem/${index}`;
-
-    // 🚀 OPTIMIZATION: Use simpler HTML cleaning by default
-    const cleanedHTML = problemHTML ? simpleCleanHTML(problemHTML) : null;
-    const readmeContent = cleanedHTML
-      ? `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\n${cleanedHTML}`
-      : `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\nProblem statement could not be retrieved. Please visit the link above.`;
-
-    const commitMessage = `Add ${problemName} [${index}] from Codeforces`;
-
-    console.log("⚡ Starting GitHub push operations...");
-
-    // 🚀 Rate limiting check for GitHub
-    if (!rateLimitTracker.canMakeRequest("github")) {
-      console.warn("⏳ Rate limit reached for GitHub API, skipping push");
-      return;
-    }
-
-    let codePushSuccess = false;
-    let readmePushSuccess = false;
-
-    try {
-      // Step 1: Push README first (creates the folder structure)
-      console.log("📝 Pushing README first...");
-      rateLimitTracker.recordRequest("github");
-      readmePushSuccess = await pushToGitHubWithRetry({
-        repoFullName: linkedRepo,
-        githubToken,
-        filePath: readmePath,
-        commitMessage: `${commitMessage} (Problem Statement)`,
-        content: readmeContent,
-      });
-
-      if (readmePushSuccess) {
-        console.log("✅ README pushed successfully");
-
-        // Small delay to ensure GitHub processes the folder creation
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        // Step 2: Push code after README succeeds (folder now exists)
-        console.log("💻 Pushing code...");
-        rateLimitTracker.recordRequest("github");
-        codePushSuccess = await pushToGitHubWithRetry({
-          repoFullName: linkedRepo,
-          githubToken,
-          filePath,
-          commitMessage,
-          content: code,
-        });
-
-        if (codePushSuccess) {
-          console.log("✅ Code pushed successfully");
-        } else {
-          console.error("❌ Code push failed after retries");
-        }
-      } else {
-        console.error("❌ README push failed, skipping code push");
-      }
-    } catch (error) {
-      console.error("❌ Error during GitHub push operations:", error);
-    }
-
-    if (codePushSuccess && readmePushSuccess) {
-      syncedProblems[submissionId] = true;
-      await chrome.storage.sync.set({ [cacheKey]: syncedProblems });
-      lastSubmissionId = submissionId;
-
+    if (success) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`✅ Successfully pushed ${folderName} in ${elapsed}s`);
-    } else {
-      console.error(`❌ Failed to push one or more files to ${folderName}`);
-      if (codePushSuccess === false) {
-        console.error("Code push failed");
-      }
-      if (readmePushSuccess === false) {
-        console.error("README push failed");
-      }
+      console.log(`✅ Latest submission synced in ${elapsed}s`);
     }
   } catch (err) {
     console.warn("🚨 Error pushing latest accepted submission:", err);
@@ -367,15 +481,26 @@ const setupPeriodicSync = async () => {
   console.log("🔄 Setting up optimized periodic sync...");
 
   try {
-    const [githubTokenObj, linkedRepoObj, cfHandleObj] = await Promise.all([
-      new Promise((resolve) => chrome.storage.sync.get("githubToken", resolve)),
-      new Promise((resolve) => chrome.storage.sync.get("linkedRepo", resolve)),
-      new Promise((resolve) => chrome.storage.sync.get("cf_handle", resolve)),
-    ]);
+    const [githubTokenObj, linkedRepoObj, cfHandleObj, syncPastSubmissionsObj] =
+      await Promise.all([
+        new Promise((resolve) =>
+          chrome.storage.sync.get("githubToken", resolve),
+        ),
+        new Promise((resolve) =>
+          chrome.storage.sync.get("linkedRepo", resolve),
+        ),
+        new Promise((resolve) => chrome.storage.sync.get("cf_handle", resolve)),
+        new Promise((resolve) =>
+          chrome.storage.sync.get("syncPastSubmissions", resolve),
+        ),
+      ]);
 
     const githubToken = githubTokenObj.githubToken;
     const linkedRepo = linkedRepoObj.linkedRepo;
     const username = cfHandleObj.cf_handle;
+    const syncPastSubmissions = Boolean(
+      syncPastSubmissionsObj.syncPastSubmissions,
+    );
 
     if (githubToken && linkedRepo && username) {
       // Clear existing alarms
@@ -383,6 +508,12 @@ const setupPeriodicSync = async () => {
 
       // Perform immediate sync
       await syncLatestAcceptedSubmission(githubToken, linkedRepo, username);
+      await syncHistoricalAcceptedSubmissions(
+        githubToken,
+        linkedRepo,
+        username,
+        syncPastSubmissions,
+      );
 
       // 🚀 Set up optimized periodic alarm (every 1 minute instead of 10 seconds)
       await chrome.alarms.create("cfPusherSync", {
@@ -393,7 +524,7 @@ const setupPeriodicSync = async () => {
       console.log(
         `✅ Ultra-fast sync alarm created - will trigger every ${
           SYNC_INTERVAL_MINUTES * 60
-        } seconds for instant response`
+        } seconds for instant response`,
       );
     } else {
       console.warn("⚠️ One or more credentials missing. Skipping sync.");
@@ -411,22 +542,39 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     console.log("⏰ Periodic sync alarm triggered");
 
     try {
-      const [githubTokenObj, linkedRepoObj, cfHandleObj] = await Promise.all([
+      const [
+        githubTokenObj,
+        linkedRepoObj,
+        cfHandleObj,
+        syncPastSubmissionsObj,
+      ] = await Promise.all([
         new Promise((resolve) =>
-          chrome.storage.sync.get("githubToken", resolve)
+          chrome.storage.sync.get("githubToken", resolve),
         ),
         new Promise((resolve) =>
-          chrome.storage.sync.get("linkedRepo", resolve)
+          chrome.storage.sync.get("linkedRepo", resolve),
         ),
         new Promise((resolve) => chrome.storage.sync.get("cf_handle", resolve)),
+        new Promise((resolve) =>
+          chrome.storage.sync.get("syncPastSubmissions", resolve),
+        ),
       ]);
 
       const githubToken = githubTokenObj.githubToken;
       const linkedRepo = linkedRepoObj.linkedRepo;
       const username = cfHandleObj.cf_handle;
+      const syncPastSubmissions = Boolean(
+        syncPastSubmissionsObj.syncPastSubmissions,
+      );
 
       if (githubToken && linkedRepo && username) {
         await syncLatestAcceptedSubmission(githubToken, linkedRepo, username);
+        await syncHistoricalAcceptedSubmissions(
+          githubToken,
+          linkedRepo,
+          username,
+          syncPastSubmissions,
+        );
       } else {
         console.warn("⚠️ Missing credentials during alarm, clearing alarm");
         await chrome.alarms.clear("cfPusherSync");
@@ -451,11 +599,16 @@ chrome.runtime.onInstalled.addListener(() => {
 // 🚀 IMPROVEMENT: Handle storage changes to restart sync when credentials change
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync") {
-    const credentialKeys = ["githubToken", "linkedRepo", "cf_handle"];
-    const hasCredentialChanges = credentialKeys.some((key) => changes[key]);
+    const syncConfigKeys = [
+      "githubToken",
+      "linkedRepo",
+      "cf_handle",
+      "syncPastSubmissions",
+    ];
+    const hasSyncConfigChanges = syncConfigKeys.some((key) => changes[key]);
 
-    if (hasCredentialChanges) {
-      console.log("🔄 Credentials changed, restarting sync");
+    if (hasSyncConfigChanges) {
+      console.log("🔄 Sync settings changed, restarting sync");
       setTimeout(setupPeriodicSync, 1000); // Small delay to ensure all changes are saved
     }
   }
@@ -467,16 +620,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("🔄 Manual sync triggered from popup");
 
     chrome.storage.sync.get(
-      ["githubToken", "linkedRepo", "cf_handle"],
+      ["githubToken", "linkedRepo", "cf_handle", "syncPastSubmissions"],
       async (result) => {
-        const { githubToken, linkedRepo, cf_handle } = result;
+        const { githubToken, linkedRepo, cf_handle, syncPastSubmissions } =
+          result;
 
         if (githubToken && linkedRepo && cf_handle) {
           try {
             await syncLatestAcceptedSubmission(
               githubToken,
               linkedRepo,
-              cf_handle
+              cf_handle,
+            );
+            await syncHistoricalAcceptedSubmissions(
+              githubToken,
+              linkedRepo,
+              cf_handle,
+              Boolean(syncPastSubmissions),
             );
             sendResponse({ success: true });
           } catch (error) {
@@ -486,7 +646,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         } else {
           sendResponse({ success: false, error: "Missing credentials" });
         }
-      }
+      },
     );
 
     return true; // Indicates we will send a response asynchronously
@@ -507,10 +667,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           await syncLatestAcceptedSubmission(
             githubToken,
             linkedRepo,
-            cf_handle
+            cf_handle,
           );
         }
-      }
+      },
     );
   }
 });
