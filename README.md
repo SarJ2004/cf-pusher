@@ -48,22 +48,27 @@
 A powerful and user-friendly Chrome extension that pushes your accepted Codeforces submissions to your GitHub repository. It supports fast auto-sync for the latest accepted solution and optional backfill for older accepted problems. The project is built with [Vite](https://vitejs.dev/) for fast development builds and optimized production output.
 
 ### Screenshots
-![Popup View](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/1_h1bvei.png)
+![Popup View](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/login-1_jnqdvw.png)
 <br/>
 <br/>
 *Popup showing the Codeforces login Screen*
 
-![Settings Page](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/4_f6bimu.png)
+![Settings Page](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/github-login-1_rsbfx8.png)
 <br/>
 <br/>
-*Settings section where you can link GitHub and manage your repo*
+*Settings section where you can link your GitHub*
 
-![Post-Login Screen](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/2_z4y5hw.png)
+![Settings Page - Post Login](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/github-login-2_xxhzme.png)
+<br/>
+<br/>
+*Settings section where you can see your Github Connection status*
+
+![Post-Login Screen](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/home-1_etlijh.png)
 <br/>
 <br/>
 *Post-Login Screen*
 
-![Streak and Solved Menu](https://res.cloudinary.com/do2max7gt/image/upload/v1745578077/3_b4vduo.png)
+![Streak and Solved Menu](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/home-2_czulvm.png)
 <br/>
 <br/>
 *Streak chart and Solved Problems chart*
