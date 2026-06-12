@@ -84,6 +84,7 @@ A powerful and user-friendly Chrome extension that pushes your accepted Codeforc
 
 - **Auto Push Accepted Submissions:** Automatically pushes your latest accepted Codeforces submission to a selected GitHub repository.
 - **Optional Past Submission Backfill:** Enable past sync to backfill older accepted problems (latest accepted submission per problem).
+- **Topic-Wise Problem Index:** Auto-generates a LeetHub-style README in your repo with problems organized by topic (tags), difficulty, and direct links to solutions.
 - **Streak Tracker** Tracks your Codeforces streak for the current week and displays it visually inside the popup.
 - **Problem Rating Chart** It has a problem rating chart and a mini info section, which tells one about the profile information, as well as the number of different problems solved in each rating range.
 - **Codeforces OAuth Login** Sign in to Codeforces via OAuth from inside the extension.

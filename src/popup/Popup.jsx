@@ -56,6 +56,7 @@ const Popup = () => {
   const [isValidatingRepo, setIsValidatingRepo] = useState(false);
   const [isGitHubAuthLoading, setIsGitHubAuthLoading] = useState(false);
   const [syncPastSubmissions, setSyncPastSubmissions] = useState(false);
+  const [generateTopicReadme, setGenerateTopicReadme] = useState(true);
   const [syncStatus, setSyncStatus] = useState({
     lastSync: null,
     error: null,
@@ -80,6 +81,7 @@ const Popup = () => {
         "cf_handle",
         "githubToken",
         "syncPastSubmissions",
+        "generateTopicReadme",
       ]);
 
       if (!isMounted) {
@@ -96,6 +98,8 @@ const Popup = () => {
       setUsername(result.cf_handle || null);
       setGithubToken(result.githubToken || null);
       setSyncPastSubmissions(Boolean(result.syncPastSubmissions));
+      // Default to true if never set
+      setGenerateTopicReadme(result.generateTopicReadme !== false);
     };
 
     bootstrap();
@@ -204,6 +208,18 @@ const Popup = () => {
       nextValue
         ? "Past submissions sync enabled."
         : "Past submissions sync disabled.",
+      "info",
+    );
+  };
+
+  const toggleGenerateTopicReadme = async () => {
+    const nextValue = !generateTopicReadme;
+    setGenerateTopicReadme(nextValue);
+    await setSyncStorage({ generateTopicReadme: nextValue });
+    showStatus(
+      nextValue
+        ? "Topic-wise README generation enabled."
+        : "Topic-wise README generation disabled.",
       "info",
     );
   };
@@ -628,6 +644,34 @@ const Popup = () => {
                   />
                 </button>
               </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Topic-wise README</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Auto-generate a topic-wise problem index in your repo README.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleGenerateTopicReadme}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    generateTopicReadme
+                      ? "bg-green-500"
+                      : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                  aria-pressed={generateTopicReadme}
+                  title={`Topic-wise README is ${
+                    generateTopicReadme ? "enabled" : "disabled"
+                  }`}>
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      generateTopicReadme ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           )}
 
@@ -657,6 +701,20 @@ const Popup = () => {
                         : "text-gray-600 dark:text-gray-400"
                     }`}>
                     {syncPastSubmissions ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Topic-wise README
+                  </span>
+                  <span
+                    className={`text-sm ${
+                      generateTopicReadme
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}>
+                    {generateTopicReadme ? "Enabled" : "Disabled"}
                   </span>
                 </div>
 

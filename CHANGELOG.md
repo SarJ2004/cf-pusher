@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is inspired by Keep a Changelog and the project follows semantic versioning.
 
+## [Unreleased]
+
+### Added
+
+- **Topic-Wise Problem Index**: Auto-generates a LeetHub-style root `README.md` in the linked repo with problems organized by Codeforces tags (topics), difficulty ratings, and direct links to solutions.
+- **Topic-wise README toggle**: New setting in the popup to enable/disable the auto-generated topic index (enabled by default).
+- Per-problem `README.md` now includes difficulty rating, language, verdict, and topic badges fetched from the Codeforces problemset API.
+
+### Changed
+
+- Migrated synced-problems storage from `chrome.storage.sync` (100 KB limit) to `chrome.storage.local` (10 MB limit) to support growing problem metadata. Existing data is automatically migrated on startup.
+- Enriched stored problem data with tags, rating, language, and file extension metadata for topic index generation.
+
 ## [1.2] - 2026-04-18
 
 ### Added
