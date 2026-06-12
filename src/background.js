@@ -40,7 +40,6 @@ const normalizeCodeForGitHub = (rawCode) => {
 
   let normalized = rawCode.replace(/\r\n/g, "\n");
 
-  // Some extractors return escaped sequences instead of actual control chars.
   normalized = normalized
     .replace(/\\r\\n/g, "\n")
     .replace(/\\n/g, "\n")
@@ -58,9 +57,8 @@ const rateLimitTracker = {
     const now = Date.now();
     const requests =
       type === "codeforces" ? this.codeforcesRequests : this.githubRequests;
-    const limit = type === "codeforces" ? 5 : 60; // CF: 5 per minute, GitHub: 60 per minute
+    const limit = type === "codeforces" ? 5 : 60;
 
-    // Remove requests older than 1 minute
     while (requests.length > 0 && now - requests[0] > 60000) {
       requests.shift();
     }
@@ -75,10 +73,11 @@ const rateLimitTracker = {
   },
 };
 
-// 🚀 IMPROVEMENT: Enhanced caching with TTL - optimized for ultra-fast sync
+// 🚀 IMPROVEMENT: Enhanced caching with TTL
 const cache = {
-  submissions: { data: null, timestamp: 0, ttl: 30000 }, // 30 seconds TTL for ultra-fast updates
-  problems: new Map(), // Map for problem statements with individual TTL
+  submissions: { data: null, timestamp: 0, ttl: 30000 },       // 30s TTL
+  cfProblems:  { data: null, timestamp: 0, ttl: 86400000 },    // 24h TTL — problem metadata rarely changes
+  problems: new Map(),
 
   get(key) {
     if (key === "submissions") {
@@ -92,9 +91,19 @@ const cache = {
       return null;
     }
 
+    if (key === "cfProblems") {
+      const now = Date.now();
+      if (
+        this.cfProblems.data &&
+        now - this.cfProblems.timestamp < this.cfProblems.ttl
+      ) {
+        return this.cfProblems.data;
+      }
+      return null;
+    }
+
     const problem = this.problems.get(key);
     if (problem && Date.now() - problem.timestamp < 900000) {
-      // 15 minutes TTL for problems (ultra-fast updates)
       return problem.data;
     }
     return null;
@@ -102,16 +111,103 @@ const cache = {
 
   set(key, value) {
     if (key === "submissions") {
-      this.submissions = { data: value, timestamp: Date.now(), ttl: 30000 }; // 30 seconds TTL
+      this.submissions = { data: value, timestamp: Date.now(), ttl: 30000 };
+    } else if (key === "cfProblems") {
+      this.cfProblems = { data: value, timestamp: Date.now(), ttl: 86400000 };
     } else {
       this.problems.set(key, { data: value, timestamp: Date.now() });
     }
   },
 };
 
+// ── NEW: Fetch and cache the full CF problemset (tags + ratings) ──────────────
+// problemset.problems returns ~10k problems in one shot and is CDN-cached on
+// CF's end, so it's fast and doesn't burn rate-limit quota meaningfully.
+const fetchCFProblemsMetadata = async () => {
+  const cached = cache.get("cfProblems");
+  if (cached) {
+    console.log("📋 Using cached CF problems metadata");
+    return cached;
+  }
+
+  try {
+    console.log("🌐 Fetching CF problems metadata (tags + ratings)...");
+    const res = await fetch("https://codeforces.com/api/problemset.problems");
+    const data = await res.json();
+
+    if (data.status !== "OK") {
+      console.warn("⚠️ CF API returned non-OK status for problemset.problems");
+      return null;
+    }
+
+    // Build a fast lookup map: "contestId-index" → { tags, rating }
+    const metaMap = {};
+    for (const p of data.result.problems) {
+      const key = `${p.contestId}-${p.index}`;
+      metaMap[key] = {
+        tags:   p.tags   || [],
+        rating: p.rating ?? null,
+      };
+    }
+
+    cache.set("cfProblems", metaMap);
+    console.log(`✅ Cached CF problems metadata (${Object.keys(metaMap).length} problems)`);
+    return metaMap;
+  } catch (e) {
+    console.warn(`⚠️ Failed to fetch CF problems metadata: ${e.message}`);
+    return null;
+  }
+};
+
+// ── NEW: Build the README content with LeetHub-style topic classification ─────
+const buildReadmeContent = ({
+  problemName,
+  problemUrl,
+  contestId,
+  index,
+  programmingLanguage,
+  tags,
+  rating,
+  cleanedHTML,
+}) => {
+  const topicBadges =
+    tags && tags.length > 0
+      ? tags.map((t) => `\`${t}\``).join(" ")
+      : "_No tags available_";
+
+  const difficultyDisplay = rating ? `${rating}` : "Unrated";
+
+  const metaBlock = `<h2><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${contestId}${index} — ${problemName}</a></h2>
+
+| | |
+|---|---|
+| **Difficulty** | ${difficultyDisplay} |
+| **Language** | ${programmingLanguage} |
+| **Verdict** | ✅ Accepted |
+| **Problem Link** | [Codeforces ${contestId}${index}](${problemUrl}) |
+
+## Topics
+${topicBadges}
+
+---
+
+## Problem Statement
+
+`;
+
+  if (cleanedHTML) {
+    return metaBlock + cleanedHTML;
+  }
+
+  return (
+    metaBlock +
+    "_Problem statement could not be retrieved. Please visit the link above._"
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 // 🚀 IMPROVEMENT: Optimized problem statement fetching with better caching
 const getProblemStatementCached = async (contestId, index, cacheKey) => {
-  // Check cache first
   const cached = cache.get(cacheKey);
   if (cached) {
     console.log(`📋 Using cached problem statement for ${contestId}-${index}`);
@@ -141,17 +237,14 @@ const simpleCleanHTML = (html) => {
   try {
     let cleaned = html;
 
-    // Handle MathJax more efficiently
     cleaned = cleaned.replace(
       /<script[^>]*type=["']math\/tex[^"']*["'][^>]*>(.*?)<\/script>/g,
       (match, mathContent) => `$${mathContent.trim()}$`,
     );
 
-    // Remove scripts and clean HTML
     cleaned = cleaned.replace(/<script[^>]*>.*?<\/script>/gs, "");
     cleaned = cleaned.replace(/<style[^>]*>.*?<\/style>/gs, "");
 
-    // Clean HTML entities more efficiently
     const entityMap = {
       "&lt;": "<",
       "&gt;": ">",
@@ -168,7 +261,7 @@ const simpleCleanHTML = (html) => {
     return cleaned;
   } catch (error) {
     console.warn("⚠️ Error cleaning HTML:", error);
-    return html; // Return original if cleaning fails
+    return html;
   }
 };
 
@@ -188,7 +281,6 @@ const pickLatestSubmissionPerProblem = (accepted) => {
     }
   }
 
-  // Process oldest first for more natural commit history.
   return Array.from(latestByProblem.values()).reverse();
 };
 
@@ -221,6 +313,23 @@ const syncSingleAcceptedSubmission = async ({
 
   console.log(`⚡ Syncing ${folderName}...`);
 
+  // ── NEW: Fetch tags + rating from cached CF metadata ─────────────────────
+  let tags = [];
+  let rating = null;
+  const cfMeta = await fetchCFProblemsMetadata();
+  if (cfMeta) {
+    const metaKey = `${contestId}-${index}`;
+    const problemMeta = cfMeta[metaKey];
+    if (problemMeta) {
+      tags   = problemMeta.tags;
+      rating = problemMeta.rating;
+      console.log(`🏷️ Tags for ${contestId}${index}: [${tags.join(", ")}] | Rating: ${rating ?? "Unrated"}`);
+    } else {
+      console.warn(`⚠️ No metadata found for problem ${contestId}-${index} in CF problemset`);
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const [codeResult, problemResult] = await Promise.allSettled([
     getSubmissionCode(contestId, submissionId),
     getProblemStatementCached(contestId, index, problemCacheKey),
@@ -249,9 +358,19 @@ const syncSingleAcceptedSubmission = async ({
 
   const problemUrl = `https://codeforces.com/contest/${contestId}/problem/${index}`;
   const cleanedHTML = problemHTML ? simpleCleanHTML(problemHTML) : null;
-  const readmeContent = cleanedHTML
-    ? `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\n${cleanedHTML}`
-    : `<h3><a href="${problemUrl}" target="_blank" rel="noopener noreferrer">${problemName}</a></h3>\n\nProblem statement could not be retrieved. Please visit the link above.`;
+
+  // ── CHANGED: Use new README builder instead of inline template ────────────
+  const readmeContent = buildReadmeContent({
+    problemName,
+    problemUrl,
+    contestId,
+    index,
+    programmingLanguage,
+    tags,
+    rating,
+    cleanedHTML,
+  });
+  // ─────────────────────────────────────────────────────────────────────────
 
   const commitMessage = `Add ${problemName} [${index}] from Codeforces`;
 
@@ -352,6 +471,12 @@ const syncHistoricalAcceptedSubmissions = async (
       return;
     }
 
+    // ── NEW: Pre-warm the CF metadata cache before batch processing ──────────
+    // This means we fetch the full problemset once up front rather than once
+    // per submission, saving time during backfill.
+    await fetchCFProblemsMetadata();
+    // ─────────────────────────────────────────────────────────────────────────
+
     const batch = pending.slice(0, HISTORY_SYNC_BATCH_SIZE);
     let syncedCount = 0;
 
@@ -402,13 +527,11 @@ const syncLatestAcceptedSubmission = async (
   if (!githubToken || !linkedRepo || !username || isSyncing || isBackfilling)
     return;
 
-  // 🚀 Rate limiting check
   if (!rateLimitTracker.canMakeRequest("codeforces")) {
     console.warn("⏳ Rate limit reached for Codeforces API, skipping sync");
     return;
   }
 
-  // 🚀 Minimum time between syncs
   const now = Date.now();
   if (now - lastSyncTime < MIN_SYNC_INTERVAL_MS) {
     console.log("⏳ Too soon since last sync, skipping");
@@ -421,13 +544,12 @@ const syncLatestAcceptedSubmission = async (
   const startTime = Date.now();
 
   try {
-    // 🚀 Try cache first
     let accepted = cache.get("submissions");
 
     if (!accepted) {
       console.log("🌐 Fetching submissions from API");
       rateLimitTracker.recordRequest("codeforces");
-      accepted = await fetchAcceptedSubmissions(username, 100); // Fetch more submissions for comprehensive sync
+      accepted = await fetchAcceptedSubmissions(username, 100);
       cache.set("submissions", accepted);
     } else {
       console.log("📋 Using cached submissions");
@@ -441,7 +563,6 @@ const syncLatestAcceptedSubmission = async (
     const latest = accepted[0];
     const { id: submissionId } = latest;
 
-    // 🚀 Quick check if this submission was already processed
     if (lastSubmissionId === submissionId) {
       console.log("✅ Latest submission already processed");
       return;
@@ -503,10 +624,8 @@ const setupPeriodicSync = async () => {
     );
 
     if (githubToken && linkedRepo && username) {
-      // Clear existing alarms
       await chrome.alarms.clear("cfPusherSync");
 
-      // Perform immediate sync
       await syncLatestAcceptedSubmission(githubToken, linkedRepo, username);
       await syncHistoricalAcceptedSubmissions(
         githubToken,
@@ -515,7 +634,6 @@ const setupPeriodicSync = async () => {
         syncPastSubmissions,
       );
 
-      // 🚀 Set up optimized periodic alarm (every 1 minute instead of 10 seconds)
       await chrome.alarms.create("cfPusherSync", {
         delayInMinutes: SYNC_INTERVAL_MINUTES,
         periodInMinutes: SYNC_INTERVAL_MINUTES,
@@ -528,7 +646,6 @@ const setupPeriodicSync = async () => {
       );
     } else {
       console.warn("⚠️ One or more credentials missing. Skipping sync.");
-      // Clear alarm if credentials are missing
       await chrome.alarms.clear("cfPusherSync");
     }
   } catch (error) {
@@ -585,7 +702,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-// 🚀 IMPROVEMENT: Enhanced startup logic with immediate sync
 chrome.runtime.onStartup.addListener(() => {
   console.log("🚀 Extension startup detected - triggering immediate sync");
   setupPeriodicSync();
@@ -596,7 +712,6 @@ chrome.runtime.onInstalled.addListener(() => {
   setupPeriodicSync();
 });
 
-// 🚀 IMPROVEMENT: Handle storage changes to restart sync when credentials change
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync") {
     const syncConfigKeys = [
@@ -609,12 +724,11 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
     if (hasSyncConfigChanges) {
       console.log("🔄 Sync settings changed, restarting sync");
-      setTimeout(setupPeriodicSync, 1000); // Small delay to ensure all changes are saved
+      setTimeout(setupPeriodicSync, 1000);
     }
   }
 });
 
-// 🚀 IMPROVEMENT: Enhanced message handling for faster sync
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "manualSync") {
     console.log("🔄 Manual sync triggered from popup");
@@ -649,10 +763,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       },
     );
 
-    return true; // Indicates we will send a response asynchronously
+    return true;
   }
 
-  // 🚀 NEW: Immediate sync trigger when user activity is detected on Codeforces
   if (request.action === "triggerImmediateSync") {
     console.log("⚡ Immediate sync triggered by user activity");
 
@@ -662,7 +775,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const { githubToken, linkedRepo, cf_handle } = result;
 
         if (githubToken && linkedRepo && cf_handle) {
-          // Clear cache to force fresh data
           cache.submissions.data = null;
           await syncLatestAcceptedSubmission(
             githubToken,
