@@ -9,7 +9,7 @@
     "url": "https://github.com/SarJ2004/cf-pusher"
   },
   "private": true,
-  "version": "1.2",
+  "version": "1.2.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

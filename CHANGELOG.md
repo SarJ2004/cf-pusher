@@ -42,7 +42,7 @@ The format is inspired by Keep a Changelog and the project follows semantic vers
 
 - Legacy Codeforces API key/secret authentication flow in favor of OAuth-based authentication.
 
-## [1.1] - 2025-xx-xx
+## [1.1] - 2025-08-11
 
 ### Added
 
@@ -52,7 +52,7 @@ The format is inspired by Keep a Changelog and the project follows semantic vers
 - Cleaner interface - Improved the UI and added a few more useful elements.
 - Added an option for manual sync (just in case the service worker stops).
 
-## [1.0] - 2025-xx-xx
+## [1.0] - 2025-04-13
 
 ### Added
 

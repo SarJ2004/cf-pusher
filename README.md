@@ -1,4 +1,5 @@
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M4M21Y0WRY)
+
 <div align="center">
   <a href="https://github.com/SarJ2004/cf-pusher">
     <img src="https://res.cloudinary.com/do2max7gt/image/upload/v1745579131/ext-icon_pquhfy.png" alt="Logo" width="360">
@@ -24,7 +25,7 @@
 ## Table of Contents
 
 - [Description](#description)
-   - [Screenshots](#screenshots)
+  - [Screenshots](#screenshots)
 - [Features](#features)
 - [Installation](#installation)
   - [Downloading the Extension](#downloading-the-extension)
@@ -40,6 +41,7 @@
 - [Contributing](#contributing)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
+- [Contributors](#contributors)
 
 ---
 
@@ -48,35 +50,36 @@
 A powerful and user-friendly Chrome extension that pushes your accepted Codeforces submissions to your GitHub repository. It supports fast auto-sync for the latest accepted solution and optional backfill for older accepted problems. The project is built with [Vite](https://vitejs.dev/) for fast development builds and optimized production output.
 
 ### Screenshots
+
 ![Popup View](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/login-1_jnqdvw.png)
 <br/>
 <br/>
-*Popup showing the Codeforces login Screen*
+_Popup showing the Codeforces login Screen_
 
 ![Settings Page](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/github-login-1_rsbfx8.png)
 <br/>
 <br/>
-*Settings section where you can link your GitHub*
+_Settings section where you can link your GitHub_
 
 ![Settings Page - Post Login](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/github-login-2_xxhzme.png)
 <br/>
 <br/>
-*Settings section where you can see your Github Connection status*
+_Settings section where you can see your Github Connection status_
 
 ![Post-Login Screen](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/home-1_etlijh.png)
 <br/>
 <br/>
-*Post-Login Screen*
+_Post-Login Screen_
 
 ![Streak and Solved Menu](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/home-2_czulvm.png)
 <br/>
 <br/>
-*Streak chart and Solved Problems chart*
+_Streak chart and Solved Problems chart_
 
 ![Successful Push](https://res.cloudinary.com/do2max7gt/image/upload/v1745580202/0bae78c6-043a-426f-affb-d01ef4583f1d.png)
 <br/>
 <br/>
-*Sample GitHub repo with pushed code and problem statement*
+_Sample GitHub repo with pushed code and problem statement_
 
 ---
 
@@ -97,6 +100,7 @@ A powerful and user-friendly Chrome extension that pushes your accepted Codeforc
 ## Installation
 
 ### Downloading the Extension
+
 Download from the [Chrome Web Store](https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael) Directly into your Chrome browser
 
 OR,
@@ -127,6 +131,7 @@ You can download the latest release of the extension directly from GitHub, and p
 ## Usage
 
 Once installed, click on the extension icon in your Chrome toolbar or follow the in-page instructions provided by the extension.
+
 1. **Connect to Codeforces:**  
    Open the popup and sign in with Codeforces OAuth. You only need the OAuth client ID (the field is prefilled by default in the extension), then complete the login flow in the browser popup.
 
@@ -142,15 +147,15 @@ Once installed, click on the extension icon in your Chrome toolbar or follow the
 You are all set now!!
 
 ### Known Issues
+
 1. **Unable to submit codes during contests**  
    The api has no access to the codes submitted during the contests, so, after the contest is over(checking phase is over), you can resubmit them to push.
 
 2. **Rapid consecutive submissions**  
    CFPusher syncs frequently, but if many accepted submissions arrive in a very short time window, GitHub/API rate limits and extraction timing can still delay some pushes. Use manual sync or enable past submission sync to recover older accepted problems.
-   
 3. **Problem statement formatting edge cases**
-   Most statements are parsed correctly, but some MathJax/LaTeX-heavy problems may still have imperfect formatting in generated README files.  
-   
+   Most statements are parsed correctly, but some MathJax/LaTeX-heavy problems may still have imperfect formatting in generated README files.
+
 ---
 
 ## Development
@@ -210,7 +215,7 @@ This project uses GitHub Actions to automate the build and release process:
 
 - **Triggering a Release:**  
   The action runs automatically when you push a version tag (for example, `v1.0.0`):
-  
+
   ```bash
   git tag v1.0.0
   git push origin v1.0.0
@@ -246,3 +251,24 @@ This project is licensed under the [MIT License](https://github.com/SarJ2004/cf-
 - GitHub Actions – for automating builds and releases.
 - [LeetSyncV2](https://github.com/disturbedlord/LeetSync2) for the inspiration to make a similar extension for codeforces
 
+---
+
+## Contributors
+
+<div align="center">
+   <a href="https://github.com/SarJ2004">
+      <img src="https://avatars.githubusercontent.com/SarJ2004?s=96" alt="SarJ2004" width="96" style="border-radius:50%" />
+   </a>
+   <a href="https://github.com/aditya-git0503">
+      <img src="https://avatars.githubusercontent.com/aditya-git0503?s=96" alt="aditya-git0503" width="96" style="border-radius:50%" />
+   </a>
+   <a href="https://github.com/sarge-razor">
+      <img src="https://avatars.githubusercontent.com/sarge-razor?s=96" alt="sarge-razor" width="96" style="border-radius:50%" />
+   </a>
+   <br/>
+   <strong>
+      <a href="https://github.com/SarJ2004">SarJ2004</a> ·
+      <a href="https://github.com/aditya-git0503">aditya-git0503</a> ·
+      <a href="https://github.com/sarge-razor">sarge-razor</a>
+   </strong>
+</div>
