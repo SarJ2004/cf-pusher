@@ -51,13 +51,11 @@ const normalizeCodeForGitHub = (rawCode) => {
 // 🚀 IMPROVEMENT: Add rate limiting protection
 const rateLimitTracker = {
   codeforcesRequests: [],
-  githubRequests: [],
 
-  canMakeRequest(type) {
+  canMakeRequest() {
     const now = Date.now();
-    const requests =
-      type === "codeforces" ? this.codeforcesRequests : this.githubRequests;
-    const limit = type === "codeforces" ? 5 : 60;
+    const requests = this.codeforcesRequests;
+    const limit = 5;
 
     while (requests.length > 0 && now - requests[0] > 60000) {
       requests.shift();
@@ -66,9 +64,8 @@ const rateLimitTracker = {
     return requests.length < limit;
   },
 
-  recordRequest(type) {
-    const requests =
-      type === "codeforces" ? this.codeforcesRequests : this.githubRequests;
+  recordRequest() {
+    const requests = this.codeforcesRequests;
     requests.push(Date.now());
   },
 };
@@ -269,7 +266,7 @@ const buildTopicIndex = (syncedProblems) => {
 };
 
 // ── Root README: LeetHub-style markdown with topic tables ────────────────────
-const buildRootReadme = (topicIndex, username, totalCount) => {
+const buildRootReadme = (topicIndex, username, totalCount, linkedRepo) => {
   const topics = Object.keys(topicIndex);
 
   let md = `# Codeforces Solutions\n\n`;
@@ -299,10 +296,17 @@ const buildRootReadme = (topicIndex, username, totalCount) => {
 
     for (const p of topicIndex[topic]) {
       const problemUrl = `https://codeforces.com/contest/${p.contestId}/problem/${p.index}`;
-      const solutionPath = `./${p.contestId}/${p.index} - ${p.name}/solution.${p.ext}`;
+      const solutionPath = [
+        p.contestId,
+        `${p.index} - ${p.name}`,
+        `solution.${p.ext}`,
+      ]
+        .map((segment) => encodeURIComponent(segment))
+        .join("/");
+      const solutionUrl = `https://github.com/${linkedRepo}/blob/HEAD/${solutionPath}`;
       const difficulty = p.rating ?? "Unrated";
 
-      md += `| ${p.contestId}${p.index} | [${p.name}](${problemUrl}) | ${difficulty} | [${p.lang}](${solutionPath}) |\n`;
+      md += `| ${p.contestId}${p.index} | [${p.name}](${problemUrl}) | ${difficulty} | [${p.lang}](${solutionUrl}) |\n`;
     }
 
     md += `\n`;
@@ -346,6 +350,7 @@ const updateRootReadme = async (githubToken, linkedRepo, username) => {
       topicIndex,
       username,
       uniqueProblems.size,
+      linkedRepo,
     );
 
     if (!rateLimitTracker.canMakeRequest("github")) {
@@ -542,12 +547,6 @@ const syncSingleAcceptedSubmission = async ({
 
   const commitMessage = `Add ${problemName} [${index}] from Codeforces`;
 
-  if (!rateLimitTracker.canMakeRequest("github")) {
-    console.warn("⏳ Rate limit reached for GitHub API, skipping push");
-    return false;
-  }
-
-  rateLimitTracker.recordRequest("github");
   const readmePushSuccess = await pushToGitHubWithRetry({
     repoFullName: linkedRepo,
     githubToken,
@@ -562,8 +561,6 @@ const syncSingleAcceptedSubmission = async ({
   }
 
   await new Promise((resolve) => setTimeout(resolve, 200));
-
-  rateLimitTracker.recordRequest("github");
   const normalizedCode = normalizeCodeForGitHub(code);
   const codePushSuccess = await pushToGitHubWithRetry({
     repoFullName: linkedRepo,

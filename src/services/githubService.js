@@ -1,4 +1,10 @@
 const GITHUB_API_BASE = "https://api.github.com";
+const GITHUB_RATE_LIMIT_WINDOW_MS = 60000;
+const GITHUB_RATE_LIMIT_MAX_REQUESTS = 60;
+const REPO_CHECK_CACHE_TTL_MS = 300000;
+
+const githubRequests = [];
+const repositoryCache = new Map();
 
 const getAuthHeaders = (githubToken, extraHeaders = {}) => ({
   Authorization: `token ${githubToken}`,
@@ -6,24 +12,68 @@ const getAuthHeaders = (githubToken, extraHeaders = {}) => ({
   ...extraHeaders,
 });
 
+const canMakeGitHubRequest = () => {
+  const now = Date.now();
+
+  while (
+    githubRequests.length > 0 &&
+    now - githubRequests[0] > GITHUB_RATE_LIMIT_WINDOW_MS
+  ) {
+    githubRequests.shift();
+  }
+
+  return githubRequests.length < GITHUB_RATE_LIMIT_MAX_REQUESTS;
+};
+
+const recordGitHubRequest = () => {
+  githubRequests.push(Date.now());
+};
+
+const getRepoCacheKey = (repoFullName, githubToken) =>
+  `${githubToken}:${repoFullName}`;
+
 export const checkRepositoryExists = async (repoFullName, githubToken) => {
+  const cacheKey = getRepoCacheKey(repoFullName, githubToken);
+  const cached = repositoryCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < REPO_CHECK_CACHE_TTL_MS) {
+    return cached.value;
+  }
+
   try {
+    if (!canMakeGitHubRequest()) {
+      return {
+        exists: false,
+        error: "GitHub request limit reached. Try again shortly.",
+      };
+    }
+
+    recordGitHubRequest();
     const response = await fetch(`${GITHUB_API_BASE}/repos/${repoFullName}`, {
       method: "GET",
       headers: getAuthHeaders(githubToken),
     });
 
+    let result;
+
     if (response.ok) {
       const repo = await response.json();
-      return { exists: true, repo };
+      result = { exists: true, repo };
+    } else if (response.status === 404) {
+      result = { exists: false, error: "Repository not found" };
+    } else {
+      const error = await response.json();
+      result = { exists: false, error: error.message || "Unknown error" };
     }
 
-    if (response.status === 404) {
-      return { exists: false, error: "Repository not found" };
+    if (response.ok || response.status === 404) {
+      repositoryCache.set(cacheKey, {
+        timestamp: Date.now(),
+        value: result,
+      });
     }
 
-    const error = await response.json();
-    return { exists: false, error: error.message || "Unknown error" };
+    return result;
   } catch (error) {
     console.error("Failed to check repository existence:", error);
     return { exists: false, error: error.message };
@@ -73,6 +123,11 @@ export const pushToGitHub = async ({
   let sha = null;
 
   try {
+    if (!canMakeGitHubRequest()) {
+      return false;
+    }
+
+    recordGitHubRequest();
     const existingFileResponse = await fetch(apiUrl, {
       method: "GET",
       headers: getAuthHeaders(githubToken),
@@ -99,6 +154,11 @@ export const pushToGitHub = async ({
   };
 
   try {
+    if (!canMakeGitHubRequest()) {
+      return false;
+    }
+
+    recordGitHubRequest();
     const response = await fetch(apiUrl, {
       method: "PUT",
       headers: {
