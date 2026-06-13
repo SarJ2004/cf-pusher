@@ -12,6 +12,9 @@ const PROBLEM_NOT_FOUND_ERROR = "Problem statement not found on page";
 const ACCESS_DENIED_ERROR =
   "Access denied - you may not have permission to view this page";
 
+const isCodeforcesHost = () =>
+  window.location.hostname.includes("codeforces.com");
+
 const sendResult = (type, data, error = null) => {
   try {
     const message = {
@@ -36,6 +39,10 @@ const sendResult = (type, data, error = null) => {
 };
 
 const getPageKind = () => {
+  if (!isCodeforcesHost()) {
+    return PAGE_KIND.unknown;
+  }
+
   const { pathname } = window.location;
 
   if (pathname.includes("/submission/")) {
@@ -232,6 +239,10 @@ const attemptExtraction = () => {
 };
 
 const respondWithExtraction = (action) => {
+  if (!isCodeforcesHost()) {
+    return null;
+  }
+
   if (action === "extractSubmissionCode") {
     const code = extractSubmissionCode();
     return {
@@ -277,6 +288,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 const maybeTriggerImmediateSync = () => {
+  if (!isCodeforcesHost()) {
+    return;
+  }
+
   const pageKind = getPageKind();
   if (pageKind !== PAGE_KIND.submission && pageKind !== PAGE_KIND.submissions) {
     return;

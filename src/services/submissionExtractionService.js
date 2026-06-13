@@ -1,5 +1,9 @@
 /* eslint-disable no-undef */
 
+const SUBMISSION_EXTRACTION_TIMEOUT_MS = 8000;
+const PROBLEM_EXTRACTION_TIMEOUT_MS = 8000;
+const EXTRACTION_RETRY_DELAY_MS = 400;
+
 const createHiddenTab = (url) =>
   new Promise((resolve, reject) => {
     chrome.tabs.create(
@@ -103,25 +107,33 @@ const extractFromUrl = async ({
 
 export const getSubmissionCode = async (contestId, submissionId) => {
   const url = `https://codeforces.com/contest/${contestId}/submission/${submissionId}`;
+  let lastError = null;
 
-  try {
-    return await extractFromUrl({
-      url,
-      expectedType: "SUBMISSION_CODE",
-      timeoutMs: 2000,
-      timeoutMessage:
-        "Timeout: Could not retrieve submission code. Please ensure you are logged in to Codeforces.",
-      parse: (message) => {
-        if (!message.code) {
-          throw new Error(message.error || "No code found");
-        }
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return await extractFromUrl({
+        url,
+        expectedType: "SUBMISSION_CODE",
+        timeoutMs: SUBMISSION_EXTRACTION_TIMEOUT_MS,
+        timeoutMessage:
+          "Timeout: Could not retrieve submission code. Please ensure you are logged in to Codeforces.",
+        parse: (message) => {
+          if (!message.code) {
+            throw new Error(message.error || "No code found");
+          }
 
-        return message.code;
-      },
-    });
-  } catch (error) {
-    throw new Error(`Failed to extract submission code: ${error.message}`);
+          return message.code;
+        },
+      });
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, EXTRACTION_RETRY_DELAY_MS));
+      }
+    }
   }
+
+  throw new Error(`Failed to extract submission code: ${lastError?.message || "Unknown error"}`);
 };
 
 export const getProblemStatement = async (contestId, index) => {
@@ -131,7 +143,7 @@ export const getProblemStatement = async (contestId, index) => {
     return await extractFromUrl({
       url,
       expectedType: "PROBLEM_STATEMENT",
-      timeoutMs: 3000,
+      timeoutMs: PROBLEM_EXTRACTION_TIMEOUT_MS,
       timeoutMessage: "Timeout: Could not retrieve problem statement",
       parse: (message) => {
         if (!message.html) {
