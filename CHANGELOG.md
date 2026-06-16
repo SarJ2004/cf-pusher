@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is inspired by Keep a Changelog and the project follows semantic versioning.
 
+## [1.2.2] - 2026-06-16
+
+### Added
+
+- **Website**: Added a website to get the Featured badge on Chrome Web Store, and to share brief info about CFPusher.
+
 ## [1.2.1] - 2026-06-13
 
 ### Added
