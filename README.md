@@ -49,6 +49,10 @@
 
 A powerful and user-friendly Chrome extension that pushes your accepted Codeforces submissions to your GitHub repository. It supports fast auto-sync for the latest accepted solution and optional backfill for older accepted problems. The project is built with [Vite](https://vitejs.dev/) for fast development builds and optimized production output.
 
+### Website
+
+This repository also includes a minimal GitHub Pages site in [`site/`](site) for a clean project landing page and download links.
+
 ### Screenshots
 
 ![Popup View](https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/login-1_jnqdvw.png)

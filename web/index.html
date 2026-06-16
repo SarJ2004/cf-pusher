@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CFPusher - Codeforces to GitHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="logo">
+        <img src="https://res.cloudinary.com/do2max7gt/image/upload/v1745579131/ext-icon_pquhfy.png" alt="CFPusher Logo"
+          class="logo-img">
+        <span>CFPusher</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#showcase">Showcase</a>
+        <a href="https://github.com/SarJ2004/cf-pusher" target="_blank" class="github-link">
+
+          <i class="fab fa-github"></i>
+          GitHub
+
+          <span class="github-stars">
+
+            <span id="star-count">--</span> Stars
+          </span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container hero-container">
+      <div class="hero-content">
+        <h1>Push Codeforces to <span class="highlight">GitHub</span> Automatically</h1>
+        <p>A powerful and user-friendly Chrome extension that seamlessly syncs your accepted Codeforces submissions
+          directly to your GitHub repository.</p>
+        <div class="cta-group">
+          <a href="https://chromewebstore.google.com/detail/cfpusher-codeforces-to-gi/eiffefcjnaanflbhcmgjlaoilhpkbael"
+            target="_blank" class="btn btn-primary">
+            <img src="./cws.svg" alt="Chrome Web Store" class="cws-icon" height="32">
+            Get for Chrome
+          </a>
+          <a href="#showcase" class="btn btn-secondary">Showcase</a>
+        </div>
+      </div>
+      <div class="hero-image">
+        <img src="https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/home-1_etlijh.png"
+          alt="CFPusher Dashboard">
+      </div>
+    </div>
+  </header>
+
+  <section id="features" class="features section">
+    <div class="container">
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <div class="feature-icon blue">
+            <i class="fas fa-rotate"></i>
+          </div>
+          <h3>Auto Sync</h3>
+          <p>Instantly pushes your latest accepted solutions without manual copying or terminal scripts.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon yellow">
+            <i class="fas fa-fire"></i>
+          </div>
+          <h3>Streak Tracker</h3>
+          <p>Visual streak tracking for the current week directly in your popup extension view.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon red">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <h3>Problem Analysis</h3>
+          <p>Assess your progress with a dynamic chart showing the number of problems solved per rating.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon gray">
+            <i class="fas fa-folder-tree"></i>
+          </div>
+          <h3>Clean Repo Output</h3>
+          <p>Auto-generates a clean topic-wise README organized by tags, difficulty, and links.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="showcase" class="showcase section">
+    <div class="container">
+      <h2 class="section-title">Designed for a Seamless Workflow</h2>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>1. Connect Both Accounts Easily</h3>
+          <p>Secure OAuth logins for both Codeforces and GitHub directly from the extension. Minimal setup, complete
+            control.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/github-login-1_rsbfx8.png"
+            alt="Settings Page OAuth">
+        </div>
+      </div>
+
+      <div class="showcase-item reverse">
+        <div class="showcase-text">
+          <h3>2. Track Streaks & Problems</h3>
+          <p>Keep your competitive programming alive with our built-in streak map and rating charts.</p>
+        </div>
+        <div class="showcase-image">
+          <img src="https://res.cloudinary.com/dgguacekk/image/upload/v1776790458/home-2_czulvm.png"
+            alt="Stats Chart and Progress">
+        </div>
+      </div>
+
+      <div class="showcase-item">
+        <div class="showcase-text">
+          <h3>3. Beautiful GitHub Integration</h3>
+          <p>No more messy repositories. Your Codeforces journey is neatly documented with Markdown-formatted problem
+            statements and tagged solution files.</p>
+        </div>
+        <div class="showcase-image">
+          <img
+            src="https://res.cloudinary.com/do2max7gt/image/upload/v1745580202/0bae78c6-043a-426f-affb-d01ef4583f1d.png"
+            alt="GitHub Output Example" style="border: 1px solid var(--border-color);">
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>
+        &copy; 2026
+        <a href="https://github.com/SarJ2004" target="_blank">SarJ2004</a>
+        & Contributors.
+        <a href="https://github.com/SarJ2004/cf-pusher/blob/main/LICENSE" target="_blank">
+          MIT License
+        </a>.
+      </p>
+      <div class="footer-links">
+        <a href="https://github.com/SarJ2004/cf-pusher/issues" target="_blank">
+          Report a Bug
+        </a>
+
+        <a href="https://github.com/SarJ2004/cf-pusher/releases" target="_blank">
+          Releases
+        </a>
+
+        <a href="./privacy-policy">
+          Privacy Policy
+        </a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    async function loadStars() {
+      try {
+        const res = await fetch(
+          'https://api.github.com/repos/SarJ2004/cf-pusher'
+        );
+
+        const data = await res.json();
+
+        document.getElementById('star-count').textContent =
+          ` ★ ${data.stargazers_count}`;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadStars();
+  </script>
+</body>
+
+</html>
