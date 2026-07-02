@@ -138,6 +138,37 @@ const migrateSyncedProblemsToLocal = async () => {
   }
 };
 
+const CURRENT_FOLDER_STRUCTURE_VERSION = 2;
+
+const migrateFolderStructureVersion = async () => {
+  try {
+    const { folderStructureVersion } = await chrome.storage.local.get("folderStructureVersion");
+    if (folderStructureVersion !== CURRENT_FOLDER_STRUCTURE_VERSION) {
+      console.log(`🔄 Migrating folder structure version from ${folderStructureVersion ?? 1} to ${CURRENT_FOLDER_STRUCTURE_VERSION}...`);
+      
+      // Clear solved problems cache from both local and sync storage
+      await chrome.storage.local.remove("cf-synced-problems");
+      await chrome.storage.sync.remove("cf-synced-problems");
+
+      // Clear all historical backfill completion indicators
+      const syncObj = await chrome.storage.sync.get(null);
+      const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
+      if (completionKeys.length > 0) {
+        await chrome.storage.sync.remove(completionKeys);
+      }
+
+      // Reset migration flag so it doesn't try to restore from sync later
+      await chrome.storage.local.set({ cfSyncedMigrated: true });
+
+      // Save the new folder structure version
+      await chrome.storage.local.set({ folderStructureVersion: CURRENT_FOLDER_STRUCTURE_VERSION });
+      console.log("✅ Folder structure version successfully updated to version 2.");
+    }
+  } catch (error) {
+    console.error("❌ Folder structure version migration failed:", error);
+  }
+};
+
 // ── NEW: Fetch and cache the full CF problemset (tags + ratings) ──────────────
 // problemset.problems returns ~10k problems in one shot and is CDN-cached on
 // CF's end, so it's fast and doesn't burn rate-limit quota meaningfully.
@@ -296,9 +327,10 @@ const buildRootReadme = (topicIndex, username, totalCount, linkedRepo) => {
 
     for (const p of topicIndex[topic]) {
       const problemUrl = `https://codeforces.com/contest/${p.contestId}/problem/${p.index}`;
+      const ratingStr = p.rating !== null && p.rating !== undefined ? String(p.rating) : "Unrated";
       const solutionPath = [
-        p.contestId,
-        `${p.index} - ${p.name}`,
+        ratingStr,
+        `${p.contestId}_${p.index} - ${p.name}`,
         `solution.${p.ext}`,
       ]
         .map((segment) => encodeURIComponent(segment))
@@ -472,19 +504,18 @@ const syncSingleAcceptedSubmission = async ({
     programmingLanguage,
   } = submission;
 
-  const folderName = `${contestId}/${index} - ${problemName}`;
   const extension = getExtensionFromLanguage(programmingLanguage);
-  const filePath = `${folderName}/solution.${extension}`;
-  const readmePath = `${folderName}/README.md`;
   const problemCacheKey = `cf-problem-${contestId}-${index}`;
 
   if (syncedProblems[submissionId]) {
-    console.log(`🟡 Already synced ${folderName}, skipping...`);
+    const rating = syncedProblems[submissionId].rating;
+    const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
+    const folderName = `${contestId}_${index} - ${problemName}`;
+    const cachedFolderName = `${ratingStr}/${folderName}`;
+    console.log(`🟡 Already synced ${cachedFolderName}, skipping...`);
     lastSubmissionId = submissionId;
     return true;
   }
-
-  console.log(`⚡ Syncing ${folderName}...`);
 
   // ── NEW: Fetch tags + rating from cached CF metadata ─────────────────────
   let tags = [];
@@ -502,6 +533,19 @@ const syncSingleAcceptedSubmission = async ({
     }
   }
   // ─────────────────────────────────────────────────────────────────────────
+
+  const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
+  const folderName = `${contestId}_${index} - ${problemName}`;
+  
+  const encodedRating = encodeURIComponent(ratingStr);
+  const encodedFolderName = encodeURIComponent(folderName);
+  const encodedFileName = encodeURIComponent(`solution.${extension}`);
+  const encodedReadmeName = encodeURIComponent("README.md");
+
+  const filePath = `${encodedRating}/${encodedFolderName}/${encodedFileName}`;
+  const readmePath = `${encodedRating}/${encodedFolderName}/${encodedReadmeName}`;
+
+  console.log(`⚡ Syncing ${ratingStr}/${folderName}...`);
 
   const [codeResult, problemResult] = await Promise.allSettled([
     getSubmissionCode(contestId, submissionId),
@@ -782,6 +826,9 @@ const setupPeriodicSync = async () => {
 
   // Ensure synced-problems are in local storage
   await migrateSyncedProblemsToLocal();
+
+  // Migrate folder structure version to rating-based layout if needed
+  await migrateFolderStructureVersion();
 
   try {
     const [githubTokenObj, linkedRepoObj, cfHandleObj, syncPastSubmissionsObj] =
