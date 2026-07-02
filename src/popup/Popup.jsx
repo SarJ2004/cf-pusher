@@ -385,6 +385,7 @@ const Popup = () => {
   const clearRepoSyncCaches = async () => {
     try {
       await chrome.storage.local.remove("cf-synced-problems");
+      await chrome.storage.sync.remove("cf-synced-problems");
       const syncObj = await chrome.storage.sync.get(null);
       const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
       if (completionKeys.length > 0) {

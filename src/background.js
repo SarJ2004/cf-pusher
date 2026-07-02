@@ -138,6 +138,37 @@ const migrateSyncedProblemsToLocal = async () => {
   }
 };
 
+const CURRENT_FOLDER_STRUCTURE_VERSION = 2;
+
+const migrateFolderStructureVersion = async () => {
+  try {
+    const { folderStructureVersion } = await chrome.storage.local.get("folderStructureVersion");
+    if (folderStructureVersion !== CURRENT_FOLDER_STRUCTURE_VERSION) {
+      console.log(`🔄 Migrating folder structure version from ${folderStructureVersion ?? 1} to ${CURRENT_FOLDER_STRUCTURE_VERSION}...`);
+      
+      // Clear solved problems cache from both local and sync storage
+      await chrome.storage.local.remove("cf-synced-problems");
+      await chrome.storage.sync.remove("cf-synced-problems");
+
+      // Clear all historical backfill completion indicators
+      const syncObj = await chrome.storage.sync.get(null);
+      const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
+      if (completionKeys.length > 0) {
+        await chrome.storage.sync.remove(completionKeys);
+      }
+
+      // Reset migration flag so it doesn't try to restore from sync later
+      await chrome.storage.local.set({ cfSyncedMigrated: true });
+
+      // Save the new folder structure version
+      await chrome.storage.local.set({ folderStructureVersion: CURRENT_FOLDER_STRUCTURE_VERSION });
+      console.log("✅ Folder structure version successfully updated to version 2.");
+    }
+  } catch (error) {
+    console.error("❌ Folder structure version migration failed:", error);
+  }
+};
+
 // ── NEW: Fetch and cache the full CF problemset (tags + ratings) ──────────────
 // problemset.problems returns ~10k problems in one shot and is CDN-cached on
 // CF's end, so it's fast and doesn't burn rate-limit quota meaningfully.
@@ -795,6 +826,9 @@ const setupPeriodicSync = async () => {
 
   // Ensure synced-problems are in local storage
   await migrateSyncedProblemsToLocal();
+
+  // Migrate folder structure version to rating-based layout if needed
+  await migrateFolderStructureVersion();
 
   try {
     const [githubTokenObj, linkedRepoObj, cfHandleObj, syncPastSubmissionsObj] =
