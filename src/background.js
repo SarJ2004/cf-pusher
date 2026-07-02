@@ -296,9 +296,11 @@ const buildRootReadme = (topicIndex, username, totalCount, linkedRepo) => {
 
     for (const p of topicIndex[topic]) {
       const problemUrl = `https://codeforces.com/contest/${p.contestId}/problem/${p.index}`;
+      const ratingStr = p.rating !== null && p.rating !== undefined ? String(p.rating) : "Unrated";
       const solutionPath = [
-        p.contestId,
-        `${p.index} - ${p.name}`,
+        "Sorted_Problems",
+        ratingStr,
+        `${p.contestId}_${p.index} - ${p.name}`,
         `solution.${p.ext}`,
       ]
         .map((segment) => encodeURIComponent(segment))
@@ -472,19 +474,15 @@ const syncSingleAcceptedSubmission = async ({
     programmingLanguage,
   } = submission;
 
-  const folderName = `${contestId}/${index} - ${problemName}`;
   const extension = getExtensionFromLanguage(programmingLanguage);
-  const filePath = `${folderName}/solution.${extension}`;
-  const readmePath = `${folderName}/README.md`;
   const problemCacheKey = `cf-problem-${contestId}-${index}`;
 
   if (syncedProblems[submissionId]) {
-    console.log(`🟡 Already synced ${folderName}, skipping...`);
+    const cachedFolderName = `${contestId}/${index} - ${problemName}`;
+    console.log(`🟡 Already synced ${cachedFolderName}, skipping...`);
     lastSubmissionId = submissionId;
     return true;
   }
-
-  console.log(`⚡ Syncing ${folderName}...`);
 
   // ── NEW: Fetch tags + rating from cached CF metadata ─────────────────────
   let tags = [];
@@ -502,6 +500,13 @@ const syncSingleAcceptedSubmission = async ({
     }
   }
   // ─────────────────────────────────────────────────────────────────────────
+
+  const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
+  const folderName = `${contestId}_${index} - ${problemName}`;
+  const filePath = `Sorted_Problems/${ratingStr}/${folderName}/solution.${extension}`;
+  const readmePath = `Sorted_Problems/${ratingStr}/${folderName}/README.md`;
+
+  console.log(`⚡ Syncing Sorted_Problems/${ratingStr}/${folderName}...`);
 
   const [codeResult, problemResult] = await Promise.allSettled([
     getSubmissionCode(contestId, submissionId),
