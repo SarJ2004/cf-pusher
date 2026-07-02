@@ -636,6 +636,9 @@ const syncHistoricalAcceptedSubmissions = async (
   console.log("🕰️ Starting historical submissions sync...");
 
   try {
+    // Check and deploy static website templates if missing
+    await checkAndDeployWebsite(githubToken, linkedRepo, username);
+
     rateLimitTracker.recordRequest("codeforces");
     const accepted = await fetchAcceptedSubmissions(username, 10000);
 
@@ -669,9 +672,6 @@ const syncHistoricalAcceptedSubmissions = async (
     const batch = pending.slice(0, HISTORY_SYNC_BATCH_SIZE);
     let syncedCount = 0;
     const newlySyncedProblems = [];
-
-    // Check and deploy static site templates before batch sync
-    await checkAndDeployWebsite(githubToken, linkedRepo, username);
 
     for (const submission of batch) {
       const { syncPastSubmissions } = await chrome.storage.sync.get(
@@ -820,6 +820,9 @@ const syncLatestAcceptedSubmission = async (
   const startTime = Date.now();
 
   try {
+    // Check and deploy static website templates if missing
+    await checkAndDeployWebsite(githubToken, linkedRepo, username);
+
     let accepted = cache.get("submissions");
 
     if (!accepted) {
@@ -865,9 +868,6 @@ const syncLatestAcceptedSubmission = async (
     if (syncResult && !syncResult.alreadySynced) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Latest submission synced in ${elapsed}s`);
-      
-      // Deploy static website templates if missing
-      await checkAndDeployWebsite(githubToken, linkedRepo, username);
 
       // Update database.json
       await updateRepositoryDatabase(githubToken, linkedRepo, [syncResult]);
