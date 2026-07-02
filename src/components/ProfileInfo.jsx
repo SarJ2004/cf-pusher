@@ -17,6 +17,8 @@ const ProfileInfo = ({ onHandleSubmit }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualHandle, setManualHandle] = useState("");
 
   const parseAuthParams = (redirectUrl) => {
     const url = new URL(redirectUrl);
@@ -168,6 +170,37 @@ const ProfileInfo = ({ onHandleSubmit }) => {
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handleManualSubmit = async (e) => {
+    e.preventDefault();
+    if (!manualHandle.trim()) {
+      setError("Please enter a valid Codeforces handle.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const user = await fetchUserInfo(manualHandle.trim());
+      if (user) {
+        setUserInfo(user);
+        chrome.storage.sync.set({
+          cf_handle: user.handle,
+          cf_oauth_profile: user,
+        });
+        onHandleSubmit(user.handle);
+        setError("");
+      } else {
+        setError("Codeforces handle not found. Please check spelling.");
+      }
+    } catch (err) {
+      console.error("Manual Codeforces validation failed:", err);
+      setError(err.message || "Failed to validate Codeforces handle.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e) => {
@@ -453,79 +486,148 @@ const ProfileInfo = ({ onHandleSubmit }) => {
             Connect to Codeforces
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Sign in securely with Codeforces OAuth
+            {showManualInput
+              ? "Verify and save your Codeforces handle"
+              : "Sign in securely with Codeforces OAuth"}
           </p>
         </div>
 
-        {/* Help text */}
-
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
-          {!APP_CF_OAUTH_CLIENT_ID && (
+        {showManualInput ? (
+          /* Manual Input Form */
+          <form onSubmit={handleManualSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                OAuth Client ID
+                Codeforces Handle
               </label>
               <div className="relative">
                 <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  value={oauthClientId}
+                  value={manualHandle}
                   onChange={(e) => {
-                    setOauthClientId(e.target.value);
-                    if (fieldErrors.clientId) {
-                      setFieldErrors((prev) => ({ ...prev, clientId: "" }));
-                    }
+                    setManualHandle(e.target.value);
+                    if (error) setError("");
                   }}
-                  placeholder="Enter your Codeforces OAuth client id"
-                  className={`w-full pl-10 pr-4 py-2 border rounded-lg text-sm transition-colors
-                    ${
-                      fieldErrors.clientId
-                        ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20"
-                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                    } 
-                    text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-orange-500`}
+                  placeholder="Enter your Codeforces handle"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              {fieldErrors.clientId && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {fieldErrors.clientId}
-                </p>
-              )}
             </div>
-          )}
 
-          {/* Global error message */}
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-red-700 dark:text-red-300">
-                  {error}
-                </p>
+            {/* Global error message */}
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {error}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Submit button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-all duration-200">
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              <>
-                <FaUser className="w-4 h-4" />
-                Connect with OAuth
-              </>
             )}
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-all duration-200">
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Checking Handle...
+                </>
+              ) : (
+                <>
+                  <FaUser className="w-4 h-4" />
+                  Save Handle
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          /* OAuth Form */
+          <form onSubmit={handleLogin} className="space-y-4">
+            {!APP_CF_OAUTH_CLIENT_ID && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  OAuth Client ID
+                </label>
+                <div className="relative">
+                  <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={oauthClientId}
+                    onChange={(e) => {
+                      setOauthClientId(e.target.value);
+                      if (fieldErrors.clientId) {
+                        setFieldErrors((prev) => ({ ...prev, clientId: "" }));
+                      }
+                    }}
+                    placeholder="Enter your Codeforces OAuth client id"
+                    className={`w-full pl-10 pr-4 py-2 border rounded-lg text-sm transition-colors
+                      ${
+                        fieldErrors.clientId
+                          ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20"
+                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                      } 
+                      text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-orange-500`}
+                  />
+                </div>
+                {fieldErrors.clientId && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.clientId}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Global error message */}
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-all duration-200">
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <FaUser className="w-4 h-4" />
+                  Connect with OAuth
+                </>
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* Toggle Mode Option */}
+        <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-3 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setShowManualInput(!showManualInput);
+              setError("");
+            }}
+            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+            {showManualInput
+              ? "Use OAuth Verification"
+              : "Enter Codeforces Handle Manually"}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );
