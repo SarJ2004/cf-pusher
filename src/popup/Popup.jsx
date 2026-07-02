@@ -132,6 +132,7 @@ const Popup = () => {
         const profile = await response.json();
         if (profile.login && isMounted) {
           setGithubUsername(profile.login);
+          await chrome.storage.local.set({ github_user: profile.login });
         }
       } catch (error) {
         console.error("Failed to fetch GitHub username:", error);

@@ -762,10 +762,32 @@ const checkAndDeployWebsite = async (githubToken, linkedRepo, username) => {
     const deployPortfolioSite = result.deployPortfolioSite;
     if (deployPortfolioSite === false) return;
 
+    let githubUser = null;
     const localResult = await chrome.storage.local.get("github_user");
-    const githubUser = localResult.github_user;
+    if (localResult && localResult.github_user) {
+      githubUser = localResult.github_user;
+    } else {
+      console.log("🌐 Fetching GitHub profile details to resolve username...");
+      const userResponse = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `token ${githubToken}` },
+      });
+      if (userResponse.ok) {
+        const data = await userResponse.json();
+        githubUser = data.login;
+        // Save it for future usage
+        await chrome.storage.local.set({ github_user: githubUser });
+      }
+    }
+
     if (githubToken && linkedRepo && githubUser && username) {
       await deployStaticSiteIfMissing(githubToken, linkedRepo, githubUser, username);
+    } else {
+      console.warn("⚠️ Deployment skipped: missing githubUser or other parameters", {
+        hasToken: !!githubToken,
+        hasRepo: !!linkedRepo,
+        githubUser,
+        username
+      });
     }
   } catch (error) {
     console.error("❌ Error in checkAndDeployWebsite:", error);
