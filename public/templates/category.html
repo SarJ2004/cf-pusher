@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rating Category - CP Archive</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/app.css">
+    <script src="assets/app.js"></script>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="site-header">
+            <div class="container header-inner">
+                <a class="brand" href="index.html" aria-label="Back to dashboard">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+                            <path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="brand-copy">
+                        <span class="brand-title">Back to Dashboard</span>
+                        <span class="brand-subtitle">Rating category</span>
+                    </span>
+                </a>
+
+                <div class="header-actions">
+                    <a class="text-button hide-mobile" href="index.html#ratings">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h3L12 6.5h5.5A2.5 2.5 0 0 1 20 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                        Ratings
+                    </a>
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode">
+                        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 3v2M12 19v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M3 12h2M19 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-main">
+            <div class="container">
+                <section class="page-heading">
+                    <div>
+                        <p class="eyebrow">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M4 19V5M8 17v-6M12 17V7M16 17v-4M20 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Difficulty band
+                        </p>
+                        <h1 class="compact-title">Rating <span id="rating-title" class="gradient-text">Loading</span></h1>
+                        <p class="section-copy" id="problem-count">Fetching solved problems from the generated archive.</p>
+                    </div>
+                    <div class="toolbar" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <input id="problem-search" class="search-box" type="search" placeholder="Search problems" autocomplete="off" style="flex: 1; min-width: 200px;">
+                        <select id="sort-select" class="search-box sort-dropdown" style="width: auto; cursor: pointer;">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                        </select>
+                    </div>
+                </section>
+
+                <section class="panel problem-container" aria-label="Problems in selected rating" style="border: 0; background: transparent; box-shadow: none; backdrop-filter: none;">
+                    <div id="problem-list" class="problem-list custom-scrollbar" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 4px; max-height: none; overflow: visible;" aria-live="polite">
+                        <div class="loading-state">Loading problems...</div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container footer-inner">
+                <span><strong>CP Submission Archive</strong> category view.</span>
+                <span data-theme-label>Theme</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetRating = urlParams.get("rating");
+            const titleEl = document.getElementById("rating-title");
+            const countEl = document.getElementById("problem-count");
+            const listEl = document.getElementById("problem-list");
+            const searchEl = document.getElementById("problem-search");
+            const sortEl = document.getElementById("sort-select");
+            const { escapeHtml, formatProblemName } = window.CPArchive;
+            let filteredProblems = [];
+
+            function renderCards(query = "") {
+                const normalizedQuery = query.trim().toLowerCase();
+                const visibleProblems = normalizedQuery
+                    ? filteredProblems.filter((problem) => {
+                        const searchable = `${problem.contestId}${problem.index} ${problem.name}`.toLowerCase();
+                        return searchable.includes(normalizedQuery);
+                    })
+                    : filteredProblems;
+
+                if (visibleProblems.length === 0) {
+                    listEl.innerHTML = `<div class="empty-state">No matching problems in this rating band.</div>`;
+                    return;
+                }
+
+                listEl.innerHTML = visibleProblems.map((problem) => {
+                    const contestCode = `${problem.contestId}${problem.index}`;
+                    const problemName = formatProblemName(problem.name);
+                    
+                    // Format Date
+                    const dateObj = new Date((problem.timestamp || 0) * 1000);
+                    const dateStr = (problem.timestamp && problem.timestamp > 0) 
+                        ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : 'Unknown';
+
+                    // Parse language badge from path
+                    const pathLower = (problem.path || "").toLowerCase();
+                    let langName = "C++";
+                    let langBg = "#2563eb";
+                    if (pathLower.endsWith(".cpp") || pathLower.includes("solution.cpp")) {
+                        langName = "C++";
+                        langBg = "#2563eb";
+                    } else if (pathLower.endsWith(".py") || pathLower.includes("solution.py")) {
+                        langName = "Python";
+                        langBg = "#eab308";
+                    } else if (pathLower.endsWith(".c") || pathLower.includes("solution.c")) {
+                        langName = "C";
+                        langBg = "#0ea5e9";
+                    }
+
+                    return `
+                        <article class="problem-card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; transition: transform 160ms ease, border-color 160ms ease; cursor: pointer; height: 100%;" onmouseover="this.style.borderColor='var(--border-strong)'" onmouseout="this.style.borderColor='var(--border)'" onclick="if(!event.target.closest('a')) window.location.href='solution.html?path=${encodeURIComponent(problem.path)}'">
+                            <div style="display: flex; align-items: start; justify-content: space-between; gap: 10px;">
+                                <span class="contest-pill">${escapeHtml(contestCode)}</span>
+                                <span class="language-badge" style="display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border-radius: 4px; color: white; background: ${langBg}; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">
+                                    ${escapeHtml(langName)}
+                                </span>
+                            </div>
+                            <div class="problem-name" style="flex: 1;">
+                                <strong style="font-size: 1.1rem; line-height: 1.3; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${escapeHtml(problemName)}">
+                                    ${escapeHtml(problemName)}
+                                </strong>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
+                                <span class="problem-date" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">
+                                    ${escapeHtml(dateStr)}
+                                </span>
+                                <a class="text-button" href="solution.html?path=${encodeURIComponent(problem.path)}" style="min-height: 32px; height: 32px; padding: 0 12px;">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width: 14px; height: 14px;">
+                                        <path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    View code
+                                </a>
+                            </div>
+                        </article>
+                    `;
+                }).join("");
+            }
+
+            if (!targetRating) {
+                titleEl.textContent = "missing";
+                countEl.textContent = "No rating was specified. Return to the dashboard and choose a category.";
+                listEl.innerHTML = `<div class="error-state">No rating specified in the URL.</div>`;
+                searchEl.disabled = true;
+                sortEl.disabled = true;
+                return;
+            }
+
+            titleEl.textContent = targetRating;
+
+            try {
+                // Added cache-buster here
+                const response = await fetch("./database.json?v=" + new Date().getTime());
+                if (!response.ok) throw new Error("Database file missing.");
+                const data = await response.json();
+                
+                filteredProblems = (data.problems ?? [])
+                    .filter((problem) => problem.rating === targetRating)
+                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sort newest first initially
+
+                if (filteredProblems.length === 0) {
+                    countEl.textContent = "0 solved problems found for this rating.";
+                    listEl.innerHTML = `<div class="empty-state">No problems found for this rating yet.</div>`;
+                    return;
+                }
+
+                countEl.textContent = `${filteredProblems.length} solved ${filteredProblems.length === 1 ? "problem" : "problems"} in this difficulty band.`;
+                renderCards();
+                
+                searchEl.addEventListener("input", () => renderCards(searchEl.value));
+                
+                sortEl.addEventListener("change", (e) => {
+                    const mode = e.target.value;
+                    if (mode === "newest") {
+                        filteredProblems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                    } else {
+                        filteredProblems.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                    }
+                    renderCards(searchEl.value);
+                });
+                
+            } catch (err) {
+                console.error("Error loading category:", err);
+                countEl.textContent = "Failed to load the generated problem database.";
+                listEl.innerHTML = `<div class="error-state">Could not read <strong>database.json</strong>. Check that the pipeline generated it in the project root.</div>`;
+                searchEl.disabled = true;
+                sortEl.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>

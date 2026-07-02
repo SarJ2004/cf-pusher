@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CP Submission Archive</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/app.css">
+    <script src="assets/app.js"></script>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="site-header">
+            <div class="container header-inner">
+                <a class="brand" href="index.html" aria-label="Codeforces archive home">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+                            <path d="M7 7.5H4.75A2.75 2.75 0 0 0 2 10.25v3.5a2.75 2.75 0 0 0 2.75 2.75H7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M17 7.5h2.25A2.75 2.75 0 0 1 22 10.25v3.5a2.75 2.75 0 0 1-2.75 2.75H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="m9 8-4 4 4 4M15 8l4 4-4 4M13 5l-2 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="brand-copy">
+                        <span class="brand-title">CP Submission Archive</span>
+                        <span class="brand-subtitle">Automated CP Vault</span>
+                    </span>
+                </a>
+
+                <div class="header-actions">
+                    <a class="text-button hide-mobile" href="#" target="_blank" rel="noreferrer">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10Z"/>
+                        </svg>
+                        Repository
+                    </a>
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode">
+                        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 3v2M12 19v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M3 12h2M19 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero">
+                <div class="container hero-content-wrapper" style="text-align: center; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+                    <div class="hero-content">
+                        <p class="eyebrow" style="justify-content: center;">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M4 16.5 9.5 11l3.5 3.5L20 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M15 7.5h5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Accepted to archived
+                        </p>
+                        <h1>My Competitive <span class="gradient-text">Programming Vault</span></h1>
+                        <p class="hero-copy" style="margin: 22px auto 0; text-align: center;">
+                            A clean archive for Codeforces solutions, organized by rating and kept fresh by an automated indexing pipeline. Every <strong>Accepted</strong> submission becomes a browsable problem profile with source code, notes, and difficulty context.
+                        </p>
+                        <div class="hero-actions" style="justify-content: center;">
+                            <a class="primary-button" href="#ratings">
+                                Browse ratings
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </a>
+                            <a class="chip-button" href="#" target="_blank" rel="noreferrer">
+                                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10Z"/>
+                                </svg>
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="container dashboard-layout">
+                <div class="dashboard-main">
+                    <!-- Profile Banner -->
+                    <section style="margin-bottom: 24px;">
+                        <div class="profile-banner panel">
+                            <div class="profile-avatar">
+                                CP
+                            </div>
+                            <div class="profile-info">
+                                <div class="profile-name-row">
+                                    <h2>Competitive Programmer</h2>
+                                    <span class="profile-badge">Sync Active</span>
+                                </div>
+                                <p style="margin: 4px 0 0; color: var(--text-muted); font-size: 0.85rem;">
+                                    Tracked handle: <a href="#" target="_blank" rel="noreferrer" style="color: var(--brand); font-weight: 800; text-decoration: underline;">User</a>.
+                                </p>
+                            </div>
+                            <div class="profile-stats">
+                                <div class="profile-stat">
+                                    <div id="banner-solved-count" class="profile-stat-val">--</div>
+                                    <div class="profile-stat-label">Solved</div>
+                                </div>
+                                <div class="profile-divider"></div>
+                                <div class="profile-stat">
+                                    <div id="banner-category-count" class="profile-stat-val">--</div>
+                                    <div class="profile-stat-label">Categories</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Contribution Heatmap Section -->
+                    <section class="activity-section" id="activity" style="margin-bottom: 32px;">
+                        <div class="section-header" style="margin-top: 0;">
+                            <div>
+                                <p class="section-kicker">Activity</p>
+                                <h2 class="section-title" style="font-size: 1.5rem;">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width:22px;height:22px;color:var(--brand);margin-right:8px;vertical-align:middle;">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                    Contribution Heatmap
+                                </h2>
+                            </div>
+                        </div>
+                        <div class="panel" style="padding: 20px; margin-top: 12px; overflow: hidden;">
+                            <div class="heatmap-scroll-wrapper" style="overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch;">
+                                <div id="heatmap-container" style="min-width: 689px; display: flex; flex-direction: column; gap: 8px;">
+                                    <!-- Heatmap content rendered via app.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Ratings Categories grid -->
+                    <section id="ratings" style="margin-bottom: 40px;">
+                        <div class="section-header" style="margin-top: 0;">
+                            <div>
+                                <p class="section-kicker">Difficulty map</p>
+                                <h2 class="section-title" style="font-size: 1.5rem;">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width: 22px; height: 22px; color: var(--brand); margin-right: 8px; vertical-align: middle;">
+                                        <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h3L12 6.5h5.5A2.5 2.5 0 0 1 20 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                    </svg>
+                                    Categories by rating
+                                </h2>
+                            </div>
+                        </div>
+                        <div id="rating-grid" class="rating-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 16px;">
+                            <!-- Grid content rendered via app.js -->
+                            <div class="loading-state panel" style="grid-column: 1 / -1;">Loading categories...</div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="dashboard-sidebar">
+                    <!-- Vault Stats Sidebar Widget -->
+                    <section style="margin-bottom: 24px;">
+                        <div class="panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width: 20px; height: 20px; color: var(--brand);">
+                                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                </svg>
+                                <h3 style="font-size: 0.95rem; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;">Vault Distribution</h3>
+                            </div>
+                            <div id="vault-distribution-list" style="display: flex; flex-direction: column; gap: 14px;">
+                                <!-- Rendered via app.js -->
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Recent Submissions Widget -->
+                    <section>
+                        <div class="panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width: 20px; height: 20px; color: var(--brand);">
+                                    <path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <h3 style="font-size: 0.95rem; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;">Recent Submissions</h3>
+                            </div>
+                            <div id="recent-submissions-list" style="display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Rendered via app.js -->
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container footer-inner">
+                <span><strong>CP Submission Archive</strong> dashboard main view.</span>
+                <span data-theme-label>Theme</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => window.CPArchive.initDashboard());
+    </script>
+</body>
+</html>

@@ -207,3 +207,36 @@ export const pushToGitHubWithRetry = async (params, maxRetries = 3) => {
   console.error(`Failed to push ${filePath} after ${maxRetries} attempts`);
   return false;
 };
+
+export const fetchFileFromGitHub = async (repoFullName, filePath, githubToken) => {
+  const apiUrl = `${GITHUB_API_BASE}/repos/${repoFullName}/contents/${filePath}`;
+  try {
+    if (!canMakeGitHubRequest()) {
+      return null;
+    }
+    recordGitHubRequest();
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: getAuthHeaders(githubToken),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.content) {
+        // Remove newlines and decode base64
+        const base64 = data.content.replace(/\s/g, "");
+        const decoded = decodeURIComponent(escape(atob(base64)));
+        return { content: decoded, sha: data.sha };
+      }
+      return { content: "", sha: data.sha };
+    }
+    if (response.status === 404) {
+      return null;
+    }
+    const error = await response.json();
+    console.error("Failed to fetch file from GitHub:", error);
+    return null;
+  } catch (error) {
+    console.error("Error fetching file from GitHub:", error);
+    return null;
+  }
+};
