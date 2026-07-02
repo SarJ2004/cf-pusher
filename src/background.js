@@ -298,7 +298,6 @@ const buildRootReadme = (topicIndex, username, totalCount, linkedRepo) => {
       const problemUrl = `https://codeforces.com/contest/${p.contestId}/problem/${p.index}`;
       const ratingStr = p.rating !== null && p.rating !== undefined ? String(p.rating) : "Unrated";
       const solutionPath = [
-        "Sorted_Problems",
         ratingStr,
         `${p.contestId}_${p.index} - ${p.name}`,
         `solution.${p.ext}`,
@@ -503,10 +502,10 @@ const syncSingleAcceptedSubmission = async ({
 
   const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
   const folderName = `${contestId}_${index} - ${problemName}`;
-  const filePath = `Sorted_Problems/${ratingStr}/${folderName}/solution.${extension}`;
-  const readmePath = `Sorted_Problems/${ratingStr}/${folderName}/README.md`;
+  const filePath = `${ratingStr}/${folderName}/solution.${extension}`;
+  const readmePath = `${ratingStr}/${folderName}/README.md`;
 
-  console.log(`⚡ Syncing Sorted_Problems/${ratingStr}/${folderName}...`);
+  console.log(`⚡ Syncing ${ratingStr}/${folderName}...`);
 
   const [codeResult, problemResult] = await Promise.allSettled([
     getSubmissionCode(contestId, submissionId),
