@@ -408,16 +408,20 @@ const Popup = () => {
         return;
       }
 
+      const isRepoChanged = linkedRepo !== fullRepoName;
+
       await setSyncStorage({ linkedRepo: fullRepoName });
       setLinkedRepo(fullRepoName);
       setRepoInput(repoName);
       
-      // Clear local caches to trigger resync on the new repository
-      await chrome.storage.local.remove("cf-synced-problems");
-      const syncObj = await chrome.storage.sync.get(null);
-      const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
-      if (completionKeys.length > 0) {
-        await chrome.storage.sync.remove(completionKeys);
+      // Clear local caches only if the repository has actually changed
+      if (isRepoChanged) {
+        await chrome.storage.local.remove("cf-synced-problems");
+        const syncObj = await chrome.storage.sync.get(null);
+        const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
+        if (completionKeys.length > 0) {
+          await chrome.storage.sync.remove(completionKeys);
+        }
       }
 
       showStatus(`Repository ${fullRepoName} linked successfully.`, "success");
