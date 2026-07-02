@@ -57,6 +57,7 @@ const Popup = () => {
   const [isGitHubAuthLoading, setIsGitHubAuthLoading] = useState(false);
   const [syncPastSubmissions, setSyncPastSubmissions] = useState(false);
   const [generateTopicReadme, setGenerateTopicReadme] = useState(true);
+  const [deployPortfolioSite, setDeployPortfolioSite] = useState(true);
   const [syncStatus, setSyncStatus] = useState({
     lastSync: null,
     error: null,
@@ -82,6 +83,7 @@ const Popup = () => {
         "githubToken",
         "syncPastSubmissions",
         "generateTopicReadme",
+        "deployPortfolioSite",
       ]);
 
       if (!isMounted) {
@@ -100,6 +102,7 @@ const Popup = () => {
       setSyncPastSubmissions(Boolean(result.syncPastSubmissions));
       // Default to true if never set
       setGenerateTopicReadme(result.generateTopicReadme !== false);
+      setDeployPortfolioSite(result.deployPortfolioSite !== false);
     };
 
     bootstrap();
@@ -220,6 +223,18 @@ const Popup = () => {
       nextValue
         ? "Topic-wise README generation enabled."
         : "Topic-wise README generation disabled.",
+      "info",
+    );
+  };
+
+  const toggleDeployPortfolioSite = async () => {
+    const nextValue = !deployPortfolioSite;
+    setDeployPortfolioSite(nextValue);
+    await setSyncStorage({ deployPortfolioSite: nextValue });
+    showStatus(
+      nextValue
+        ? "Portfolio website deployment enabled."
+        : "Portfolio website deployment disabled.",
       "info",
     );
   };
@@ -672,6 +687,42 @@ const Popup = () => {
                   />
                 </button>
               </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Deploy Portfolio Website</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Host a personal competitive programming statistics page on GitHub Pages.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleDeployPortfolioSite}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    deployPortfolioSite
+                      ? "bg-green-500"
+                      : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                  aria-pressed={deployPortfolioSite}
+                  title={`Deploy portfolio site is ${
+                    deployPortfolioSite ? "enabled" : "disabled"
+                  }`}>
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      deployPortfolioSite ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {deployPortfolioSite && (
+                <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-2.5 dark:border-yellow-900/50 dark:bg-yellow-950/20">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-400 leading-normal">
+                    <strong>💡 Enable GitHub Pages:</strong> Once deployed, go to your repository settings on GitHub &rarr; <strong>Pages</strong>. Set source to <strong>GitHub Actions</strong> to activate the portfolio!
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

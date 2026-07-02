@@ -26,5 +26,17 @@
   "host_permissions": [
     "https://codeforces.com/*",
     "https://cfpusher-backend.onrender.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "templates/index.html",
+        "templates/category.html",
+        "templates/solution.html",
+        "templates/assets/app.js",
+        "templates/assets/app.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ]
 }

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Viewer - CP Archive</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link id="prism-theme" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/app.css">
+    <script src="assets/app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="site-header">
+            <div class="container header-inner">
+                <button class="brand brand-button" type="button" onclick="window.history.back()" aria-label="Back to previous page">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+                            <path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="brand-copy">
+                        <span class="brand-title" id="header-title">Loading solution</span>
+                        <span class="brand-subtitle">Code viewer</span>
+                    </span>
+                </button>
+
+                <div class="header-actions">
+                    <a class="text-button hide-mobile" href="index.html">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3V10.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                        Home
+                    </a>
+                    <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode">
+                        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 3v2M12 19v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M3 12h2M19 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-main">
+            <div class="container">
+                <section class="page-heading">
+                    <div>
+                        <p class="eyebrow">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M16 18 22 12 16 6M8 6 2 12l6 6M14 4l-4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Source archive
+                        </p>
+                        <h1 class="compact-title" id="problem-title">Loading problem</h1>
+                    </div>
+                    <div class="toolbar" id="solution-toolbar" style="display: flex; gap: 10px; align-items: center;">
+                        <button class="text-button toggle-sidebar-btn" type="button" aria-label="Toggle notes sidebar">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; width: 16px; height: 16px;">
+                                <path d="M15 19l-7-7 7-7"/>
+                            </svg>
+                            Toggle Notes
+                        </button>
+                    </div>
+                </section>
+
+                <section class="solution-layout">
+                    <aside class="solution-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M12 17h.01M12 13a3 3 0 1 0-3-3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Problem notes
+                            </h2>
+                        </div>
+                        <div id="readme-content" class="problem-info markdown-body custom-scrollbar">
+                            <div class="loading-state">Loading README...</div>
+                        </div>
+                    </aside>
+
+                    <section class="solution-card code-window">
+                        <div class="card-header">
+                            <div class="window-dots" aria-hidden="true">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <span class="filename" id="filename-display">solution.cpp</span>
+                            <button class="text-button" type="button" onclick="copyCode()" aria-label="Copy solution code">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M8 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2M6 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                </svg>
+                                <span id="copy-label">Copy</span>
+                            </button>
+                        </div>
+                        <div class="code-body custom-scrollbar">
+                            <pre><code id="code-content" class="language-cpp">Loading solution...</code></pre>
+                        </div>
+                    </section>
+                </section>
+            </div>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container footer-inner">
+                <span><strong>CP Submission Archive</strong> solution view.</span>
+                <span data-theme-label>Theme</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+    <script>
+        let GITHUB_USERNAME = "User";
+        let REPO_NAME = "Repo";
+        let BRANCH = "main";
+        let rawCode = "";
+
+        async function fetchFirst(urls) {
+            let lastError;
+            for (const url of urls) {
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) return response;
+                    lastError = new Error(`${response.status} ${response.statusText}`);
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw lastError || new Error("No sources available.");
+        }
+
+        async function loadConfig() {
+            try {
+                const configRes = await fetch("config.json");
+                if (configRes.ok) {
+                    const config = await configRes.json();
+                    GITHUB_USERNAME = config.githubUsername;
+                    REPO_NAME = config.repoName;
+                    BRANCH = config.branch || "main";
+                }
+            } catch (e) {
+                console.error("Failed to load config.json:", e);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await loadConfig(); // Load config dynamically before files are requested
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const folderPath = urlParams.get("path");
+            const codeEl = document.getElementById("code-content");
+            const readmeEl = document.getElementById("readme-content");
+            const titleEl = document.getElementById("problem-title");
+            const headerTitleEl = document.getElementById("header-title");
+            const { escapeHtml, formatProblemName, encodePath } = window.CPArchive;
+
+            if (!folderPath) {
+                titleEl.textContent = "Error";
+                headerTitleEl.textContent = "Error";
+                codeEl.textContent = "No solution path specified in the URL.";
+                readmeEl.innerHTML = `<div class="error-state">Please return to the dashboard.</div>`;
+                return;
+            }
+
+            const cleanFolderPath = folderPath.replace(/\/$/, "");
+            const folderName = cleanFolderPath.substring(cleanFolderPath.lastIndexOf("/") + 1);
+            
+            // Format problem title: "1866_A - Ambitious Kid" -> "1866A - Ambitious Kid"
+            let formattedTitle = formatProblemName(folderName);
+            formattedTitle = formattedTitle.replace(/^(\d+)_([A-Za-z0-9]+)/, "$1$2");
+            titleEl.textContent = formattedTitle;
+            headerTitleEl.textContent = formattedTitle.split("-")[0].trim();
+
+            const candidates = [
+                { filename: "solution.cpp", lang: "cpp" },
+                { filename: "solution.py", lang: "python" },
+                { filename: "solution.c", lang: "c" }
+            ];
+
+            const readmeUrls = [
+                `./${encodePath(cleanFolderPath)}/README.md`,
+                `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/${BRANCH}/${encodePath(cleanFolderPath)}/README.md`
+            ];
+
+            // 1. Fetch README
+            try {
+                const res = await fetchFirst(readmeUrls);
+                const text = await res.text();
+                readmeEl.innerHTML = marked.parse(text);
+            } catch (err) {
+                console.error("Error loading README:", err);
+                readmeEl.innerHTML = `<div class="error-state">Could not load the problem statement description.</div>`;
+            }
+
+            // 2. Fetch Code
+            let solutionLoaded = false;
+            for (const item of candidates) {
+                const codeUrls = [
+                    `./${encodePath(cleanFolderPath)}/${item.filename}`,
+                    `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/${BRANCH}/${encodePath(cleanFolderPath)}/${item.filename}`
+                ];
+
+                try {
+                    const res = await fetchFirst(codeUrls);
+                    rawCode = await res.text();
+                    
+                    document.getElementById("filename-display").textContent = item.filename;
+                    codeEl.className = `language-${item.lang}`;
+                    codeEl.textContent = rawCode;
+                    
+                    Prism.highlightElement(codeEl);
+                    solutionLoaded = true;
+                    break;
+                } catch (err) {
+                    // Try next candidate
+                }
+            }
+
+            if (!solutionLoaded) {
+                codeEl.textContent = "Could not find any C++, Python, or C solution source code for this problem.";
+            }
+
+            // Sidebar toggle Notes
+            const toggleSidebarBtn = document.querySelector(".toggle-sidebar-btn");
+            const solutionLayout = document.querySelector(".solution-layout");
+
+            if (toggleSidebarBtn && solutionLayout) {
+                // Read collapsed state from storage
+                const isCollapsed = localStorage.getItem("cp-notes-collapsed") === "true";
+                if (isCollapsed) {
+                    solutionLayout.classList.add("sidebar-collapsed");
+                    toggleSidebarBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; width: 16px; height: 16px;">
+                            <path d="M9 5l7 7-7 7"/>
+                        </svg>
+                        Show Notes
+                    `;
+                }
+
+                toggleSidebarBtn.addEventListener("click", () => {
+                    const collapsed = solutionLayout.classList.toggle("sidebar-collapsed");
+                    localStorage.setItem("cp-notes-collapsed", collapsed);
+                    
+                    if (collapsed) {
+                        toggleSidebarBtn.innerHTML = `
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; width: 16px; height: 16px;">
+                                <path d="M9 5l7 7-7 7"/>
+                            </svg>
+                            Show Notes
+                        `;
+                    } else {
+                        toggleSidebarBtn.innerHTML = `
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; width: 16px; height: 16px;">
+                                <path d="M15 19l-7-7 7-7"/>
+                            </svg>
+                            Toggle Notes
+                        `;
+                    }
+                });
+            }
+        });
+
+        function copyCode() {
+            if (!rawCode) return;
+            navigator.clipboard.writeText(rawCode).then(() => {
+                const label = document.getElementById("copy-label");
+                label.textContent = "Copied!";
+                setTimeout(() => {
+                    label.textContent = "Copy";
+                }, 2000);
+            }).catch(err => {
+                console.error("Copy failed:", err);
+            });
+        }
+    </script>
+</body>
+</html>

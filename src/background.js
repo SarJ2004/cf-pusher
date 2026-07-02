@@ -4,7 +4,9 @@ import {
   getSubmissionCode,
   getProblemStatement,
 } from "./services/submissionExtractionService";
-import { pushToGitHubWithRetry } from "./services/githubService";
+import { pushToGitHubWithRetry, fetchFileFromGitHub } from "./services/githubService";
+import { updateDatabaseIndex } from "./services/databaseService";
+import { deployStaticSiteIfMissing } from "./services/websiteService";
 
 let isSyncing = false;
 let isBackfilling = false;
@@ -472,19 +474,17 @@ const syncSingleAcceptedSubmission = async ({
     programmingLanguage,
   } = submission;
 
-  const folderName = `${contestId}/${index} - ${problemName}`;
-  const extension = getExtensionFromLanguage(programmingLanguage);
-  const filePath = `${folderName}/solution.${extension}`;
-  const readmePath = `${folderName}/README.md`;
   const problemCacheKey = `cf-problem-${contestId}-${index}`;
+  const extension = getExtensionFromLanguage(programmingLanguage);
 
   if (syncedProblems[submissionId]) {
+    const rating = syncedProblems[submissionId].rating;
+    const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
+    const folderName = `${contestId}_${index} - ${problemName}`;
     console.log(`🟡 Already synced ${folderName}, skipping...`);
     lastSubmissionId = submissionId;
-    return true;
+    return { alreadySynced: true };
   }
-
-  console.log(`⚡ Syncing ${folderName}...`);
 
   // ── NEW: Fetch tags + rating from cached CF metadata ─────────────────────
   let tags = [];
@@ -503,6 +503,13 @@ const syncSingleAcceptedSubmission = async ({
   }
   // ─────────────────────────────────────────────────────────────────────────
 
+  const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
+  const folderName = `${contestId}_${index} - ${problemName}`;
+  const filePath = `Sorted_Problems/${ratingStr}/${folderName}/solution.${extension}`;
+  const readmePath = `Sorted_Problems/${ratingStr}/${folderName}/README.md`;
+
+  console.log(`⚡ Syncing ${folderName}...`);
+
   const [codeResult, problemResult] = await Promise.allSettled([
     getSubmissionCode(contestId, submissionId),
     getProblemStatementCached(contestId, index, problemCacheKey),
@@ -514,7 +521,7 @@ const syncSingleAcceptedSubmission = async ({
       `❌ Failed to get submission code for ${folderName}:`,
       errorMsg,
     );
-    return false;
+    return null;
   }
 
   const code = codeResult.value;
@@ -557,7 +564,7 @@ const syncSingleAcceptedSubmission = async ({
 
   if (!readmePushSuccess) {
     console.error(`❌ README push failed for ${folderName}`);
-    return false;
+    return null;
   }
 
   await new Promise((resolve) => setTimeout(resolve, 200));
@@ -572,7 +579,7 @@ const syncSingleAcceptedSubmission = async ({
 
   if (!codePushSuccess) {
     console.error(`❌ Code push failed for ${folderName}`);
-    return false;
+    return null;
   }
 
   syncedProblems[submissionId] = {
@@ -587,7 +594,16 @@ const syncSingleAcceptedSubmission = async ({
   lastSubmissionId = submissionId;
   await chrome.storage.local.set({ [cacheKey]: syncedProblems });
   console.log(`✅ Successfully synced ${folderName}`);
-  return true;
+
+  const problemData = {
+    contestId,
+    index,
+    name: problemName,
+    rating: ratingStr,
+    timestamp: Math.floor(submission.submissionTimestamp / 1000), // in seconds
+    path: `Sorted_Problems/${ratingStr}/${folderName}`
+  };
+  return problemData;
 };
 
 const syncHistoricalAcceptedSubmissions = async (
@@ -652,6 +668,10 @@ const syncHistoricalAcceptedSubmissions = async (
 
     const batch = pending.slice(0, HISTORY_SYNC_BATCH_SIZE);
     let syncedCount = 0;
+    const newlySyncedProblems = [];
+
+    // Check and deploy static site templates before batch sync
+    await checkAndDeployWebsite(githubToken, linkedRepo, username);
 
     for (const submission of batch) {
       const { syncPastSubmissions } = await chrome.storage.sync.get(
@@ -659,10 +679,10 @@ const syncHistoricalAcceptedSubmissions = async (
       );
       if (!syncPastSubmissions) {
         console.log("⏹️ Historical submissions sync disabled, stopping batch");
-        return;
+        break;
       }
 
-      const success = await syncSingleAcceptedSubmission({
+      const syncResult = await syncSingleAcceptedSubmission({
         submission,
         githubToken,
         linkedRepo,
@@ -670,7 +690,10 @@ const syncHistoricalAcceptedSubmissions = async (
         cacheKey,
       });
 
-      if (success) {
+      if (syncResult && !syncResult.alreadySynced) {
+        syncedCount += 1;
+        newlySyncedProblems.push(syncResult);
+      } else if (syncResult && syncResult.alreadySynced) {
         syncedCount += 1;
       }
     }
@@ -680,8 +703,9 @@ const syncHistoricalAcceptedSubmissions = async (
       `🧩 Historical sync batch done: ${syncedCount}/${batch.length} synced, ${remaining} remaining`,
     );
 
-    // Update root README once at end of backfill batch (not per-submission)
-    if (syncedCount > 0) {
+    // Update database.json and root README once at end of backfill batch
+    if (newlySyncedProblems.length > 0) {
+      await updateRepositoryDatabase(githubToken, linkedRepo, newlySyncedProblems);
       await updateRootReadme(githubToken, linkedRepo, username);
     }
 
@@ -693,6 +717,58 @@ const syncHistoricalAcceptedSubmissions = async (
     console.error("❌ Historical submissions sync failed:", error);
   } finally {
     isBackfilling = false;
+  }
+};
+
+const updateRepositoryDatabase = async (githubToken, linkedRepo, newProblems) => {
+  if (!newProblems || newProblems.length === 0) return;
+  try {
+    console.log(`📊 Updating database.json with ${newProblems.length} new items...`);
+    const fileResult = await fetchFileFromGitHub(linkedRepo, "database.json", githubToken);
+    let existingDb = null;
+    if (fileResult) {
+      try {
+        existingDb = JSON.parse(fileResult.content);
+      } catch (e) {
+        console.warn("⚠️ Failed to parse database.json, starting fresh", e);
+      }
+    }
+    
+    let updatedDb = existingDb;
+    for (const problem of newProblems) {
+      updatedDb = updateDatabaseIndex(updatedDb, problem);
+    }
+
+    const success = await pushToGitHubWithRetry({
+      repoFullName: linkedRepo,
+      githubToken,
+      filePath: "database.json",
+      commitMessage: `Update database index with ${newProblems.length} solved problems [CFPusher]`,
+      content: JSON.stringify(updatedDb, null, 4),
+    });
+    if (success) {
+      console.log(`✅ Successfully updated database.json on GitHub`);
+    } else {
+      console.warn(`⚠️ Failed to push updated database.json`);
+    }
+  } catch (error) {
+    console.error("❌ Failed to update repository database.json:", error);
+  }
+};
+
+const checkAndDeployWebsite = async (githubToken, linkedRepo, username) => {
+  try {
+    const result = await chrome.storage.sync.get("deployPortfolioSite");
+    const deployPortfolioSite = result.deployPortfolioSite;
+    if (deployPortfolioSite === false) return;
+
+    const localResult = await chrome.storage.local.get("github_user");
+    const githubUser = localResult.github_user;
+    if (githubToken && linkedRepo && githubUser && username) {
+      await deployStaticSiteIfMissing(githubToken, linkedRepo, githubUser, username);
+    }
+  } catch (error) {
+    console.error("❌ Error in checkAndDeployWebsite:", error);
   }
 };
 
@@ -756,7 +832,7 @@ const syncLatestAcceptedSubmission = async (
       return;
     }
 
-    const success = await syncSingleAcceptedSubmission({
+    const syncResult = await syncSingleAcceptedSubmission({
       submission: latest,
       githubToken,
       linkedRepo,
@@ -764,9 +840,16 @@ const syncLatestAcceptedSubmission = async (
       cacheKey,
     });
 
-    if (success) {
+    if (syncResult && !syncResult.alreadySynced) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Latest submission synced in ${elapsed}s`);
+      
+      // Deploy static website templates if missing
+      await checkAndDeployWebsite(githubToken, linkedRepo, username);
+
+      // Update database.json
+      await updateRepositoryDatabase(githubToken, linkedRepo, [syncResult]);
+
       await updateRootReadme(githubToken, linkedRepo, username);
     }
   } catch (err) {
