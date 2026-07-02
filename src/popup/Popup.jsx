@@ -382,6 +382,19 @@ const Popup = () => {
     }
   };
 
+  const clearRepoSyncCaches = async () => {
+    try {
+      await chrome.storage.local.remove("cf-synced-problems");
+      const syncObj = await chrome.storage.sync.get(null);
+      const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
+      if (completionKeys.length > 0) {
+        await chrome.storage.sync.remove(completionKeys);
+      }
+    } catch (error) {
+      console.error("Failed to clear sync caches:", error);
+    }
+  };
+
   const linkRepository = async () => {
     const repoName = repoInput.trim();
     if (!repoName) {
@@ -416,12 +429,7 @@ const Popup = () => {
       
       // Clear local caches only if the repository has actually changed
       if (isRepoChanged) {
-        await chrome.storage.local.remove("cf-synced-problems");
-        const syncObj = await chrome.storage.sync.get(null);
-        const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
-        if (completionKeys.length > 0) {
-          await chrome.storage.sync.remove(completionKeys);
-        }
+        await clearRepoSyncCaches();
       }
 
       showStatus(`Repository ${fullRepoName} linked successfully.`, "success");
@@ -471,12 +479,7 @@ const Popup = () => {
       setNewRepoName("");
 
       // Clear local caches to trigger resync on the new repository
-      await chrome.storage.local.remove("cf-synced-problems");
-      const syncObj = await chrome.storage.sync.get(null);
-      const completionKeys = Object.keys(syncObj).filter((k) => k.startsWith("cf-history-sync-complete-"));
-      if (completionKeys.length > 0) {
-        await chrome.storage.sync.remove(completionKeys);
-      }
+      await clearRepoSyncCaches();
 
       showStatus(`Repository ${data.full_name} created and linked.`, "success");
     } catch (error) {

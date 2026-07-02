@@ -505,8 +505,14 @@ const syncSingleAcceptedSubmission = async ({
 
   const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
   const folderName = `${contestId}_${index} - ${problemName}`;
-  const filePath = `${ratingStr}/${folderName}/solution.${extension}`;
-  const readmePath = `${ratingStr}/${folderName}/README.md`;
+  
+  const encodedRating = encodeURIComponent(ratingStr);
+  const encodedFolderName = encodeURIComponent(folderName);
+  const encodedFileName = encodeURIComponent(`solution.${extension}`);
+  const encodedReadmeName = encodeURIComponent("README.md");
+
+  const filePath = `${encodedRating}/${encodedFolderName}/${encodedFileName}`;
+  const readmePath = `${encodedRating}/${encodedFolderName}/${encodedReadmeName}`;
 
   console.log(`⚡ Syncing ${ratingStr}/${folderName}...`);
 
