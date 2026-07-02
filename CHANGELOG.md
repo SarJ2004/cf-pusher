@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is inspired by Keep a Changelog and the project follows semantic versioning.
 
+## [1.2.3] - 2026-07-02
+
+### Changed
+
+- **Folder Structure**: Changed the organization of pushed solutions under rating-based folders (/{rating}/...), as compared to the previous contest-based folder structure (/{contestId}/...). This change is intended to make it easier to navigate and find solutions based on difficulty level, rather than contest ID.
+
 ## [1.2.2] - 2026-06-16
 
 ### Added
