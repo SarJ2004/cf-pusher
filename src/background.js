@@ -477,7 +477,10 @@ const syncSingleAcceptedSubmission = async ({
   const problemCacheKey = `cf-problem-${contestId}-${index}`;
 
   if (syncedProblems[submissionId]) {
-    const cachedFolderName = `${contestId}/${index} - ${problemName}`;
+    const rating = syncedProblems[submissionId].rating;
+    const ratingStr = rating !== null && rating !== undefined ? String(rating) : "Unrated";
+    const folderName = `${contestId}_${index} - ${problemName}`;
+    const cachedFolderName = `${ratingStr}/${folderName}`;
     console.log(`🟡 Already synced ${cachedFolderName}, skipping...`);
     lastSubmissionId = submissionId;
     return true;
